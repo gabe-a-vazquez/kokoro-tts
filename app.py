@@ -7,6 +7,7 @@ import numpy as np
 import os
 import phonemizer
 import random
+import spaces
 import torch
 import yaml
 
@@ -112,6 +113,7 @@ def s_curve(p):
 
 SAMPLE_RATE = 24000
 
+@spaces.GPU(duration=10)
 @torch.no_grad()
 def forward(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=5000, closing_cut=0, ease_in=3000, ease_out=0):
     ps = ps or phonemize(text, voice)
