@@ -1,0 +1,11 @@
+fugashi
+gradio
+mojimoji
+munch
+noisereduce
+phonemizer
+scipy
+torch
+transformers
+unicodedata2
+unidic-lite
