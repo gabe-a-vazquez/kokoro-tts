@@ -115,12 +115,13 @@ SAMPLE_RATE = 24000
 
 @spaces.GPU(duration=10)
 @torch.no_grad()
-def forward(tokens, ref_s, speed):
+def forward(tokens, voice, speed):
     tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
     input_lengths = torch.LongTensor([tokens.shape[-1]]).to(device)
     text_mask = length_to_mask(input_lengths).to(device)
     bert_dur = model.bert(tokens, attention_mask=(~text_mask).int())
     d_en = model.bert_encoder(bert_dur).transpose(-1, -2)
+    ref_s = VOICES[voice]
     s = ref_s[:, 128:]
     d = model.predictor.text_encoder(d_en, s, input_lengths, text_mask)
     x, _ = model.predictor.lstm(d)
@@ -147,8 +148,7 @@ def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=5000
     elif len(tokens) > 510:
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
-    ref_s = VOICES[voice]
-    out = forward(tokens, ref_s, speed)
+    out = forward(tokens, voice, speed)
     if reduce_noise > 0:
         out = nr.reduce_noise(y=out, sr=SAMPLE_RATE, prop_decrease=reduce_noise, n_fft=512)
     opening_cut = max(0, int(opening_cut / speed))
