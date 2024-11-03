@@ -115,14 +115,7 @@ SAMPLE_RATE = 24000
 
 @spaces.GPU(duration=10)
 @torch.no_grad()
-def forward(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=5000, closing_cut=0, ease_in=3000, ease_out=0):
-    ps = ps or phonemize(text, voice)
-    tokens = [i for i in map(VOCAB.get, ps) if i is not None]
-    if not tokens:
-        return (None, '')
-    elif len(tokens) > 510:
-        tokens = tokens[:510]
-    ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
+def forward(tokens, speed):
     tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
     input_lengths = torch.LongTensor([tokens.shape[-1]]).to(device)
     text_mask = length_to_mask(input_lengths).to(device)
@@ -145,7 +138,17 @@ def forward(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=5000,
     t_en = model.text_encoder(tokens, input_lengths, text_mask)
     asr = (t_en @ pred_aln_trg.unsqueeze(0).to(device))
     out = model.decoder(asr, F0_pred, N_pred, ref_s[:, :128])
-    out = out.squeeze().cpu().numpy()
+    return out.squeeze().cpu().numpy()
+
+def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=5000, closing_cut=0, ease_in=3000, ease_out=0):
+    ps = ps or phonemize(text, voice)
+    tokens = [i for i in map(VOCAB.get, ps) if i is not None]
+    if not tokens:
+        return (None, '')
+    elif len(tokens) > 510:
+        tokens = tokens[:510]
+    ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
+    out = forward(tokens, speed)
     if reduce_noise > 0:
         out = nr.reduce_noise(y=out, sr=SAMPLE_RATE, prop_decrease=reduce_noise, n_fft=512)
     opening_cut = max(0, int(opening_cut / speed))
