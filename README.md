@@ -1,12 +1,12 @@
 ---
 title: Kokoro
-emoji: 🏢
-colorFrom: red
-colorTo: red
+emoji: 🔊
+colorFrom: indigo
+colorTo: purple
 sdk: gradio
-sdk_version: 5.4.0
+sdk_version: 5.5.0
 app_file: app.py
-pinned: false
+pinned: true
 license: mit
 short_description: Text to speech with 80M parameters
 ---
