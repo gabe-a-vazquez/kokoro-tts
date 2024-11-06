@@ -4,6 +4,7 @@ mojimoji
 munch
 noisereduce
 phonemizer
+pypdf
 scipy
 torch
 transformers

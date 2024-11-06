@@ -6,6 +6,7 @@ import noisereduce as nr
 import numpy as np
 import os
 import phonemizer
+import pypdf
 import random
 import re
 import spaces
@@ -314,7 +315,7 @@ def lf_generate(segments, voice, speed=1.0, reduce_noise=0.5, opening_cut=4000, 
             outs = lf_forward(token_lists[i:i+batch_size], voice, speed)
         except gr.exceptions.Error as e:
             if wavs:
-                gr.Warning(e)
+                gr.Warning(str(e))
             else:
                 raise gr.Error(e)
             break
@@ -343,10 +344,22 @@ def did_change_segments(segments):
         gr.Button(f'Generate x{x}', variant='primary' if x else 'secondary', interactive=x > 0),
     ]
 
+def extract_text(file):
+    if file.endswith('.pdf'):
+        with open(file, 'rb') as rb:
+            pdf_reader = pypdf.PdfReader(rb)
+            return '\n'.join([page.extract_text() for page in pdf_reader.pages])
+    elif file.endswith('.txt'):
+        with open(file, 'r') as r:
+            return '\n'.join([line for line in r])
+    return None
+
 with gr.Blocks() as lf_tts:
     with gr.Row():
         with gr.Column():
+            file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
             text = gr.Textbox(label='Input Text')
+            file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
             voice = gr.Dropdown(list(CHOICES.items()), label='Voice')
             with gr.Accordion('Text Settings', open=False):
                 skip_square_brackets = gr.Checkbox(True, label='Skip [Square Brackets]', info='Recommended for academic papers, Wikipedia articles, or texts with citations.')
