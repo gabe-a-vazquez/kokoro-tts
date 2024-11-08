@@ -184,10 +184,10 @@ def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=4000
     ease_out = min(int(ease_out / speed), len(out)//2)
     for i in range(ease_out):
         out[-i-1] *= s_curve(i / ease_out)
-    pad_before = max(0, int(pad_before / speed))
+    pad_before = int(pad_before / speed)
     if pad_before > 0:
         out = np.concatenate([np.zeros(pad_before), out])
-    pad_after = max(0, int(pad_after / speed))
+    pad_after = int(pad_after / speed)
     if pad_after > 0:
         out = np.concatenate([out, np.zeros(pad_after)])
     return ((SAMPLE_RATE, out), ps)
@@ -314,13 +314,12 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     segments = [row for t in texts for row in recursive_split(t, voice)]
     return [(i, *row) for i, row in enumerate(segments)]
 
-def lf_generate(segments, voice, speed=1.0, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000):
+def lf_generate(segments, voice, speed=1.0, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000, pad_between=10000):
     token_lists = list(map(tokenize, segments['Tokens']))
     wavs = []
-    opening_cut = max(0, int(opening_cut / speed))
-    closing_cut = max(0, int(closing_cut / speed))
-    pad_before = max(0, int(pad_before / speed))
-    pad_after = max(0, int(pad_after / speed))
+    opening_cut = int(opening_cut / speed)
+    closing_cut = int(closing_cut / speed)
+    pad_between = int(pad_between / speed)
     batch_size = 100
     for i in range(0, len(token_lists), batch_size):
         try:
@@ -344,11 +343,15 @@ def lf_generate(segments, voice, speed=1.0, reduce_noise=0.5, opening_cut=4000, 
             ease_out = min(int(ease_out / speed), len(out)//2)
             for i in range(ease_out):
                 out[-i-1] *= s_curve(i / ease_out)
-            if pad_before > 0:
-                wavs.append(np.zeros(pad_before))
+            if wavs and pad_between > 0:
+                wavs.append(np.zeros(pad_between))
             wavs.append(out)
-            if pad_after > 0:
-                wavs.append(np.zeros(pad_after))
+    pad_before = int(pad_before / speed)
+    if pad_before > 0:
+        wavs.insert(0, np.zeros(pad_before))
+    pad_after = int(pad_after / speed)
+    if pad_after > 0:
+        wavs.append(np.zeros(pad_after))
     return (SAMPLE_RATE, np.concatenate(wavs)) if wavs else None
 
 def did_change_segments(segments):
@@ -400,14 +403,16 @@ with gr.Blocks() as lf_tts:
                         ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='Ease Out', info='📐 Ease out for this many samples, before closing cut.')
                 with gr.Row():
                     with gr.Column():
-                        pad_before = gr.Slider(minimum=0, maximum=24000, value=5000, step=1000, label='Pad Before', info='🔇 How many samples of silence to insert before each segment.')
+                        pad_before = gr.Slider(minimum=0, maximum=24000, value=5000, step=1000, label='Pad Before', info='🔇 How many samples of silence to insert before the start.')
                     with gr.Column():
-                        pad_after = gr.Slider(minimum=0, maximum=24000, value=5000, step=1000, label='Pad After', info='🔇 How many samples of silence to append after each segment.')
+                        pad_after = gr.Slider(minimum=0, maximum=24000, value=5000, step=1000, label='Pad After', info='🔇 How many samples of silence to append after the end.')
+                with gr.Row():
+                    pad_between = gr.Slider(minimum=0, maximum=24000, value=10000, step=1000, label='Pad Between', info='🔇 How many samples of silence to insert between segments.')
     with gr.Row():
         segments = gr.Dataframe(headers=['#', 'Text', 'Tokens', 'Length'], row_count=(1, 'dynamic'), col_count=(4, 'fixed'), label='Segments', interactive=False, wrap=True)
         segments.change(fn=did_change_segments, inputs=[segments], outputs=[segment_btn, generate_btn])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_btn.click(lf_generate, inputs=[segments, voice, speed, reduce_noise, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after], outputs=[audio])
+    generate_btn.click(lf_generate, inputs=[segments, voice, speed, reduce_noise, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after, pad_between], outputs=[audio])
 
 with gr.Blocks() as app:
     gr.TabbedInterface(
