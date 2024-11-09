@@ -30,10 +30,12 @@ def parens_to_angles(s):
 
 def normalize(text):
     # TODO: Custom text normalization rules?
-    text = text.replace('Dr.', 'Doctor')
-    text = text.replace('Mr.', 'Mister')
-    text = text.replace('Ms.', 'Miss')
-    text = text.replace('Mrs.', 'Mrs')
+    text = re.sub(r'D[Rr]\.(?= [A-Z])', 'Doctor', text)
+    text = re.sub(r'Mr\.|MR\.(?= [A-Z])', 'Mister', text)
+    text = re.sub(r'Ms\.|MS\.(?= [A-Z])', 'Miss', text)
+    text = re.sub(r'Mrs\.|MRS\.(?= [A-Z])', 'Mrs', text)
+    text = re.sub(r'etc\.(?! [A-Z])', 'etc', text)
+    text = re.sub(r'\b([Yy])eah\b', r"\1e'a", text)
     text = text.replace(chr(8216), "'").replace(chr(8217), "'")
     text = text.replace(chr(8220), '"').replace(chr(8221), '"')
     text = re.sub(r'[^\S \n]', ' ', text)
