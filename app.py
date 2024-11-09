@@ -103,19 +103,21 @@ for key, state_dict in torch.load(os.path.join(snapshot, 'net.pth'), map_locatio
         model[key].load_state_dict(state_dict, strict=False)
 
 CHOICES = {
-    '🇺🇸 🚺 American Female 0': 'af0',
-    '🇺🇸 🚺 Bella': 'af1',
-    '🇺🇸 🚺 Nicole': 'af2',
-    '🇺🇸 🚹 Michael': 'am0',
-    '🇺🇸 🚹 Adam': 'am1',
-    '🇬🇧 🚺 British Female 0': 'bf0',
-    '🇬🇧 🚺 British Female 1': 'bf1',
-    '🇬🇧 🚺 British Female 2': 'bf2',
-    '🇬🇧 🚹 British Male 0': 'bm0',
-    '🇬🇧 🚹 British Male 1': 'bm1',
-    '🇬🇧 🚹 British Male 2': 'bm2',
-    '🇬🇧 🚹 British Male 3': 'bm3',
-    '🇯🇵 🚺 Japanese Female 0': 'jf0',
+    '🇺🇸 🚺 American Female 0': 'af_0',
+    '🇺🇸 🚺 Bella': 'af_bella',
+    '🇺🇸 🚺 Nicole': 'af_nicole',
+    '🇺🇸 🚹 Michael': 'am_michael',
+    '🇺🇸 🚹 Adam': 'am_adam',
+    '🇬🇧 🚺 British Female 0': 'bf_0',
+    '🇬🇧 🚺 British Female 1': 'bf_1',
+    '🇬🇧 🚺 British Female 2': 'bf_2',
+    '🇬🇧 🚺 British Female 3': 'bf_3',
+    '🇬🇧 🚹 British Male 0': 'bm_0',
+    '🇬🇧 🚹 British Male 1': 'bm_1',
+    '🇬🇧 🚹 British Male 2': 'bm_2',
+    '🇬🇧 🚹 British Male 3': 'bm_3',
+    '🇬🇧 🚹 British Male 4': 'bm_4',
+    '🇯🇵 🚺 Japanese Female 0': 'jf_0',
 }
 VOICES = {k: torch.load(os.path.join(snapshot, 'voices', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()}
 
