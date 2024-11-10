@@ -117,7 +117,6 @@ CHOICES = {
     '🇬🇧 🚹 British Male 0': 'bm_0',
     '🇬🇧 🚹 British Male 1': 'bm_1',
     '🇬🇧 🚹 British Male 2': 'bm_2',
-    '🇬🇧 🚹 British Male 3': 'bm_3',
     '🇯🇵 🚺 Japanese Female 0': 'jf_0',
 }
 VOICES = {k: torch.load(os.path.join(snapshot, 'voices', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()}
