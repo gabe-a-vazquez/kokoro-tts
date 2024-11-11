@@ -41,6 +41,7 @@ def normalize(text):
     text = re.sub(r'[^\S \n]', ' ', text)
     text = re.sub(r'  +', ' ', text)
     text = re.sub(r'(?<=\n) +(?=\n)', '', text)
+    text = re.sub(r'(?<=\d),(?=\d)', '', text)
     return parens_to_angles(text).strip()
 
 phonemizers = dict(
