@@ -13,6 +13,30 @@ import spaces
 import torch
 import yaml
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+snapshot = snapshot_download(repo_id='hexgrad/kokoro', allow_patterns=['*.pt', '*.pth', '*.yml'], use_auth_token=os.environ['TOKEN'])
+config = yaml.safe_load(open(os.path.join(snapshot, 'config.yml')))
+model = build_model(config['model_params'])
+for key, value in model.items():
+    for module in value.children():
+        if isinstance(module, torch.nn.RNNBase):
+            module.flatten_parameters()
+
+_ = [model[key].eval() for key in model]
+_ = [model[key].to(device) for key in model]
+for key, state_dict in torch.load(os.path.join(snapshot, 'net.pth'), map_location='cpu', weights_only=True)['net'].items():
+    assert key in model, key
+    try:
+        model[key].load_state_dict(state_dict)
+    except:
+        state_dict = {k[7:]: v for k, v in state_dict.items()}
+        model[key].load_state_dict(state_dict, strict=False)
+
+PARAM_COUNT = sum(p.numel() for value in model.values() for p in value.parameters())
+print('PARAM_COUNT', PARAM_COUNT)
+assert PARAM_COUNT < 82_000_000, PARAM_COUNT
+
 random_texts = {}
 for lang in ['en', 'ja']:
     with open(f'{lang}.txt', 'r') as r:
@@ -85,25 +109,6 @@ VOCAB = get_vocab()
 
 def tokenize(ps):
     return [i for i in map(VOCAB.get, ps) if i is not None]
-
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-snapshot = snapshot_download(repo_id='hexgrad/kokoro', allow_patterns=['*.pt', '*.pth', '*.yml'], use_auth_token=os.environ['TOKEN'])
-config = yaml.safe_load(open(os.path.join(snapshot, 'config.yml')))
-model = build_model(config['model_params'])
-for key, value in model.items():
-    for module in value.children():
-        if isinstance(module, torch.nn.RNNBase):
-            module.flatten_parameters()
-_ = [model[key].eval() for key in model]
-_ = [model[key].to(device) for key in model]
-for key, state_dict in torch.load(os.path.join(snapshot, 'net.pth'), map_location='cpu', weights_only=True)['net'].items():
-    assert key in model, key
-    try:
-        model[key].load_state_dict(state_dict)
-    except:
-        state_dict = {k[7:]: v for k, v in state_dict.items()}
-        model[key].load_state_dict(state_dict, strict=False)
 
 CHOICES = {
     '🇺🇸 🚺 American Female 0': 'af_0',
