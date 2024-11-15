@@ -128,8 +128,7 @@ CHOICES = {
 VOICES = {k: torch.load(os.path.join(snapshot, 'voices', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()}
 def get_random_en_voice():
     # Top 2 most stable voices in each category of (US/GB) and (F/M)
-    # excluding Adam, because he is too recognizable
-    return random.choice(['af_0', 'af_bella', 'am_michael', 'bf_0', 'bf_2', 'bm_0', 'bm_1'])
+    return random.choice(['af_0', 'af_bella', 'am_michael', 'am_adam', 'bf_0', 'bf_2', 'bm_0', 'bm_1'])
 
 np_log_99 = np.log(99)
 def s_curve(p):
