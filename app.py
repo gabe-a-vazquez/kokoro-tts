@@ -111,7 +111,7 @@ def tokenize(ps):
     return [i for i in map(VOCAB.get, ps) if i is not None]
 
 CHOICES = {
-    '🇺🇸 🚺 American Female 0': 'af_0',
+    '🇺🇸 🚺 American Female 0': 'af_zero',
     '🇺🇸 🚺 Bella': 'af_bella',
     '🇺🇸 🚺 Nicole': 'af_nicole',
     '🇺🇸 🚹 Michael': 'am_michael',
@@ -126,9 +126,10 @@ CHOICES = {
     '🇯🇵 🚺 Japanese Female 0': 'jf_0',
 }
 VOICES = {k: torch.load(os.path.join(snapshot, 'voices', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()}
-def get_random_en_voice():
-    # Top 2 most stable voices in each category of (US/GB) and (F/M)
-    return random.choice(['af_0', 'af_bella', 'am_michael', 'am_adam', 'bf_0', 'bf_2', 'bm_0', 'bm_1'])
+def get_random_af_voice():
+    # Must be an American female voice to maintain compatability with
+    # https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
+    return random.choice(['af_zero', 'af_bella'])
 
 np_log_99 = np.log(99)
 def s_curve(p):
@@ -168,9 +169,9 @@ def forward(tokens, voice, speed):
     asr = t_en @ pred_aln_trg.unsqueeze(0).to(device)
     return model.decoder(asr, F0_pred, N_pred, ref_s[:, :128]).squeeze().cpu().numpy()
 
-def generate(text, voice=None, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000):
+def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000):
     if voice not in VOICES:
-        voice = get_random_en_voice()
+        voice = get_random_af_voice()
     ps = ps or phonemize(text, voice)
     tokens = tokenize(ps)
     if not tokens:
