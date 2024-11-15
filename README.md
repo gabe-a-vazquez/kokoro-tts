@@ -1,5 +1,5 @@
 ---
-title: Kokoro
+title: Kokoro TTS
 emoji: 🔊
 colorFrom: indigo
 colorTo: purple
