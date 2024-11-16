@@ -501,7 +501,7 @@ Note that this Space and the underlying Kokoro model are both under development 
 with gr.Blocks() as app:
     gr.TabbedInterface(
         [basic_tts, lf_tts, about, api_info],
-        ['Basic TTS', 'Long-Form', 'About', 'Gradio API'],
+        ['🗣️ Basic TTS', '📖 Long-Form', 'ℹ️ About', '🚀 Gradio API'],
     )
 
 if __name__ == '__main__':
