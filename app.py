@@ -218,6 +218,8 @@ def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=4000
 
 with gr.Blocks() as basic_tts:
     with gr.Row():
+        gr.Markdown('Generate speech for one segment of text (up to 510 tokens) using Kokoro, a TTS model with 80 million parameters.')
+    with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text')
             voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='🧪 Experimental voices may be unstable.')
@@ -397,6 +399,8 @@ def extract_text(file):
 
 with gr.Blocks() as lf_tts:
     with gr.Row():
+        gr.Markdown('Generate speech in batches of 100 text segments and automatically join them together. This may exhaust your ZeroGPU quota.')
+    with gr.Row():
         with gr.Column():
             file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
             text = gr.Textbox(label='Input Text')
@@ -438,10 +442,36 @@ with gr.Blocks() as lf_tts:
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
     generate_btn.click(lf_generate, inputs=[segments, voice, speed, reduce_noise, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after, pad_between], outputs=[audio])
 
+with gr.Blocks() as api_info:
+    gr.Markdown("""
+This Space can be used via API. The following code block can be copied and run in one Google Colab cell.
+```
+# 1. Install the Gradio Python client
+!pip install -q gradio_client
+
+# 2. Initialize the client
+from gradio_client import Client
+client = Client('hexgrad/Kokoro-TTS')
+
+# 3. Call the generate endpoint, which returns a pair: an audio path and a string of output phonemes
+audio_path, out_ps = client.predict(
+    text="How could I know? It's an unanswerable question. Like asking an unborn child if they'll lead a good life. They haven't even been born.",
+    voice='af_0',
+    api_name='/generate'
+)
+
+# 4. Display the audio and print the output phonemes
+from IPython.display import display, Audio
+display(Audio(audio_path))
+print(out_ps)
+```
+Note that this Space and the underlying Kokoro model are both under development and subject to change. API reliability is not guaranteed. Also, Hugging Face and/or Gradio might enforce rate limits.
+""")
+
 with gr.Blocks() as app:
     gr.TabbedInterface(
-        [basic_tts, lf_tts],
-        ['Basic TTS', 'Long-Form'],
+        [basic_tts, lf_tts, api_info],
+        ['Basic TTS', 'Long-Form', 'Gradio API'],
     )
 
 if __name__ == '__main__':
