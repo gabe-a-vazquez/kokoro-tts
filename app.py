@@ -34,7 +34,6 @@ for key, state_dict in torch.load(os.path.join(snapshot, 'net.pth'), map_locatio
         model[key].load_state_dict(state_dict, strict=False)
 
 PARAM_COUNT = sum(p.numel() for value in model.values() for p in value.parameters())
-print('PARAM_COUNT', PARAM_COUNT)
 assert PARAM_COUNT < 82_000_000, PARAM_COUNT
 
 random_texts = {}
@@ -442,6 +441,36 @@ with gr.Blocks() as lf_tts:
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
     generate_btn.click(lf_generate, inputs=[segments, voice, speed, reduce_noise, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after, pad_between], outputs=[audio])
 
+with gr.Blocks() as about:
+    gr.Markdown("""
+Kokoro is a frontier TTS model for its size. It has 80 million parameters,<sup>[1]</sup> uses a lean StyleTTS 2 architecture,<sup>[2]</sup> and was trained on high-quality data.
+
+The weights are currently private, but a free public demo is hosted at https://hf.co/spaces/hexgrad/Kokoro-TTS
+
+### Compute
+The model was trained on 1x A100-class 80GB instances rented from [Vast.ai](https://cloud.vast.ai/?ref_id=79907).<sup>[3]</sup> Vast was selected over other compute providers due to its competitive on-demand hourly rates. The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
+
+### Updates
+This Space and the underlying Kokoro model are both under development and subject to change.
+Last model update: 2024 Nov 15
+Model trained by: Raven (@rzvzn on Discord)
+
+### Licenses
+Inference code: MIT
+espeak-ng dependency: GPL-3.0<sup>[4]</sup>
+Random English texts: Unknown<sup>[5]</sup>
+Random Japanese texts: CC0 public domain<sup>[6]</sup>
+Kokoro model weights: N/A
+
+### References
+1. Kokoro parameter count | https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L37
+2. StyleTTS 2 | https://github.com/yl4579/StyleTTS2
+3. Vast.ai referral link | https://cloud.vast.ai/?ref_id=79907
+4. eSpeak NG | https://github.com/espeak-ng/espeak-ng
+5. Quotable Data | https://github.com/quotable-io/data/blob/master/data/quotes.json
+6. Common Voice Japanese sentences | https://github.com/common-voice/common-voice/tree/main/server/data/ja
+""")
+
 with gr.Blocks() as api_info:
     gr.Markdown("""
 This Space can be used via API. The following code block can be copied and run in one Google Colab cell.
@@ -465,13 +494,13 @@ from IPython.display import display, Audio
 display(Audio(audio_path))
 print(out_ps)
 ```
-Note that this Space and the underlying Kokoro model are both under development and subject to change. API reliability is not guaranteed. Also, Hugging Face and/or Gradio might enforce rate limits.
+Note that this Space and the underlying Kokoro model are both under development and subject to change. Reliability is not guaranteed. Hugging Face and/or Gradio might enforce their own rate limits.
 """)
 
 with gr.Blocks() as app:
     gr.TabbedInterface(
-        [basic_tts, lf_tts, api_info],
-        ['Basic TTS', 'Long-Form', 'Gradio API'],
+        [basic_tts, lf_tts, about, api_info],
+        ['Basic TTS', 'Long-Form', 'About', 'Gradio API'],
     )
 
 if __name__ == '__main__':
