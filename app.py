@@ -114,7 +114,6 @@ def tokenize(ps):
 CHOICES = {
 '🇺🇸 🚺 American Female 0': 'af_0',
 '🇺🇸 🚺 Alloy 🧪': 'af_alloy',
-'🇺🇸 🚺 Ava 🧪': 'af_ava',
 '🇺🇸 🚺 Bella': 'af_bella',
 '🇺🇸 🚺 Jessica 🧪': 'af_jessica',
 '🇺🇸 🚺 Nicole': 'af_nicole',
