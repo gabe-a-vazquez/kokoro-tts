@@ -110,26 +110,36 @@ VOCAB = get_vocab()
 def tokenize(ps):
     return [i for i in map(VOCAB.get, ps) if i is not None]
 
+# 🧪 indicates that voices are experimental
 CHOICES = {
-    '🇺🇸 🚺 American Female 0': 'af_zero',
-    '🇺🇸 🚺 Bella': 'af_bella',
-    '🇺🇸 🚺 Nicole': 'af_nicole',
-    '🇺🇸 🚹 Michael': 'am_michael',
-    '🇺🇸 🚹 Adam': 'am_adam',
-    '🇬🇧 🚺 British Female 0': 'bf_0',
-    '🇬🇧 🚺 British Female 1': 'bf_1',
-    '🇬🇧 🚺 British Female 2': 'bf_2',
-    '🇬🇧 🚺 British Female 3': 'bf_3',
-    '🇬🇧 🚹 British Male 0': 'bm_0',
-    '🇬🇧 🚹 British Male 1': 'bm_1',
-    '🇬🇧 🚹 British Male 2': 'bm_2',
-    '🇯🇵 🚺 Japanese Female 0': 'jf_0',
+'🇺🇸 🚺 American Female 0': 'af_0',
+'🇺🇸 🚺 Alloy 🧪': 'af_alloy',
+'🇺🇸 🚺 Ava 🧪': 'af_ava',
+'🇺🇸 🚺 Bella': 'af_bella',
+'🇺🇸 🚺 Jessica 🧪': 'af_jessica',
+'🇺🇸 🚺 Nicole': 'af_nicole',
+'🇺🇸 🚺 Nova 🧪': 'af_nova',
+'🇺🇸 🚺 River 🧪': 'af_river',
+'🇺🇸 🚺 Sarah': 'af_sarah',
+'🇺🇸 🚺 Sky 🧪': 'af_sky',
+'🇺🇸 🚹 Adam': 'am_adam',
+'🇺🇸 🚹 Echo 🧪': 'am_echo',
+'🇺🇸 🚹 Eric 🧪': 'am_eric',
+'🇺🇸 🚹 Liam 🧪': 'am_liam',
+'🇺🇸 🚹 Michael': 'am_michael',
+'🇺🇸 🚹 Onyx 🧪': 'am_onyx',
+'🇬🇧 🚺 British Female 0': 'bf_0',
+'🇬🇧 🚺 Alice 🧪': 'bf_alice',
+'🇬🇧 🚺 Lily 🧪': 'bf_lily',
+'🇬🇧 🚹 British Male 0': 'bm_0',
+'🇬🇧 🚹 British Male 1': 'bm_1',
+'🇬🇧 🚹 British Male 2': 'bm_2',
+'🇬🇧 🚹 Daniel 🧪': 'bm_daniel',
+'🇬🇧 🚹 Fable 🧪': 'bm_fable',
+'🇬🇧 🚹 George 🧪': 'bm_george',
+'🇯🇵 🚺 Japanese Female 0': 'jf_0',
 }
 VOICES = {k: torch.load(os.path.join(snapshot, 'voices', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()}
-def get_random_af_voice():
-    # Must be an American female voice to maintain compatability with
-    # https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-    return random.choice(['af_zero', 'af_bella'])
 
 np_log_99 = np.log(99)
 def s_curve(p):
@@ -171,7 +181,8 @@ def forward(tokens, voice, speed):
 
 def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000):
     if voice not in VOICES:
-        voice = get_random_af_voice()
+        # Ensure stability for https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
+        voice = 'af_0'
     ps = ps or phonemize(text, voice)
     tokens = tokenize(ps)
     if not tokens:
@@ -210,7 +221,7 @@ with gr.Blocks() as basic_tts:
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text')
-            voice = gr.Dropdown(list(CHOICES.items()), label='Voice')
+            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='🧪 Experimental voices may be unstable.')
             with gr.Row():
                 random_btn = gr.Button('Random Text', variant='secondary')
                 generate_btn = gr.Button('Generate', variant='primary')
@@ -391,7 +402,7 @@ with gr.Blocks() as lf_tts:
             file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
             text = gr.Textbox(label='Input Text')
             file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
-            voice = gr.Dropdown(list(CHOICES.items()), label='Voice')
+            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='🧪 Experimental voices may be unstable.')
             with gr.Accordion('Text Settings', open=False):
                 skip_square_brackets = gr.Checkbox(True, label='Skip [Square Brackets]', info='Recommended for academic papers, Wikipedia articles, or texts with citations.')
                 newline_split = gr.Number(2, label='Newline Split', info='Split the input text on this many newlines. Affects how the text is segmented.', precision=0, minimum=0)
