@@ -451,19 +451,14 @@ The weights are currently private, but a free public demo is hosted at https://h
 The model was trained on 1x A100-class 80GB instances rented from [Vast.ai](https://cloud.vast.ai/?ref_id=79907).<sup>[3]</sup> Vast was selected over other compute providers due to its competitive on-demand hourly rates. The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
 
 ### Updates
-This Space and the underlying Kokoro model are both under development and subject to change.
-
-Last model update: 2024 Nov 15
-
+This Space and the underlying Kokoro model are both under development and subject to change.<br/>
+Last model update: 2024 Nov 15<br/>
 Model trained by: Raven (@rzvzn on Discord)
 
 ### Licenses
-Inference code: MIT
-
-espeak-ng dependency: GPL-3.0<sup>[4]</sup>
-
-Random English texts: Unknown<sup>[5]</sup>
-
+Inference code: MIT<br/>
+espeak-ng dependency: GPL-3.0<sup>[4]</sup><br/>
+Random English texts: Unknown<sup>[5]</sup><br/>
 Random Japanese texts: CC0 public domain<sup>[6]</sup>
 
 Kokoro model weights: N/A
