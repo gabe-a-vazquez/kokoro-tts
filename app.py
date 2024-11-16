@@ -151,7 +151,7 @@ def s_curve(p):
 
 SAMPLE_RATE = 24000
 
-@spaces.GPU(duration=5)
+@spaces.GPU(duration=10)
 @torch.no_grad()
 def forward(tokens, voice, speed):
     ref_s = VOICES[voice]
