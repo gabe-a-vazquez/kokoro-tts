@@ -111,6 +111,7 @@ def tokenize(ps):
 
 # 🧪 indicates that voices are experimental
 CHOICES = {
+'🇺🇸 🚺 Gladiatrix ⚔️': 'af_gladiatrix',
 '🇺🇸 🚺 American Female 0': 'af_0',
 '🇺🇸 🚺 Alloy 🧪': 'af_alloy',
 '🇺🇸 🚺 Bella': 'af_bella',
@@ -180,7 +181,7 @@ def forward(tokens, voice, speed):
 def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000):
     if voice not in VOICES:
         # Ensure stability for https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-        voice = 'af_0'
+        voice = 'af_gladiatrix'
     ps = ps or phonemize(text, voice)
     tokens = tokenize(ps)
     if not tokens:
@@ -486,7 +487,7 @@ client = Client('hexgrad/Kokoro-TTS')
 # 3. Call the generate endpoint, which returns a pair: an audio path and a string of output phonemes
 audio_path, out_ps = client.predict(
     text="How could I know? It's an unanswerable question. Like asking an unborn child if they'll lead a good life. They haven't even been born.",
-    voice='af_0',
+    voice='af_gladiatrix',
     api_name='/generate'
 )
 
