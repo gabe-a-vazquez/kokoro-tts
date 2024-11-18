@@ -109,9 +109,10 @@ VOCAB = get_vocab()
 def tokenize(ps):
     return [i for i in map(VOCAB.get, ps) if i is not None]
 
-# 🧪 indicates that voices are experimental
+# 🧪 Experimental voices may be unstable.
+# ⚔️ Arena voices are averages of other voices.
 CHOICES = {
-'🇺🇸 🚺 Gladiatrix ⚔️': 'af_gladiatrix',
+'🇺🇸 🚺 American Female ⚔️': 'af',
 '🇺🇸 🚺 American Female 0': 'af_0',
 '🇺🇸 🚺 Alloy 🧪': 'af_alloy',
 '🇺🇸 🚺 Bella': 'af_bella',
@@ -181,7 +182,7 @@ def forward(tokens, voice, speed):
 def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000):
     if voice not in VOICES:
         # Ensure stability for https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-        voice = 'af_gladiatrix'
+        voice = 'af'
     ps = ps or phonemize(text, voice)
     tokens = tokenize(ps)
     if not tokens:
@@ -222,7 +223,7 @@ with gr.Blocks() as basic_tts:
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text')
-            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='🧪 Experimental voices may be unstable.')
+            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='🧪 Experimental voices may be unstable. ⚔️ Arena voices are averages of other voices.')
             with gr.Row():
                 random_btn = gr.Button('Random Text', variant='secondary')
                 generate_btn = gr.Button('Generate', variant='primary')
@@ -405,7 +406,7 @@ with gr.Blocks() as lf_tts:
             file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
             text = gr.Textbox(label='Input Text')
             file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
-            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='🧪 Experimental voices may be unstable.')
+            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='🧪 Experimental voices may be unstable. ⚔️ Arena voices are averages of other voices.')
             with gr.Accordion('Text Settings', open=False):
                 skip_square_brackets = gr.Checkbox(True, label='Skip [Square Brackets]', info='Recommended for academic papers, Wikipedia articles, or texts with citations.')
                 newline_split = gr.Number(2, label='Newline Split', info='Split the input text on this many newlines. Affects how the text is segmented.', precision=0, minimum=0)
@@ -487,7 +488,7 @@ client = Client('hexgrad/Kokoro-TTS')
 # 3. Call the generate endpoint, which returns a pair: an audio path and a string of output phonemes
 audio_path, out_ps = client.predict(
     text="How could I know? It's an unanswerable question. Like asking an unborn child if they'll lead a good life. They haven't even been born.",
-    voice='af_gladiatrix',
+    voice='af',
     api_name='/generate'
 )
 
