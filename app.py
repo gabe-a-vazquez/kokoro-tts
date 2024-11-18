@@ -109,11 +109,10 @@ VOCAB = get_vocab()
 def tokenize(ps):
     return [i for i in map(VOCAB.get, ps) if i is not None]
 
-# 🧪 Experimental voices may be unstable.
-# ⚔️ Arena voices are averages of other voices.
+# ⭐ Starred voices are averages of similar voices. 🧪 Experimental voices may be unstable.
 CHOICES = {
-'🇺🇸 🚺 American Female ⚔️': 'af',
-'🇺🇸 🚺 American Female 0': 'af_0',
+'🇺🇸 🚺 American Female ⭐': 'af',
+'🇺🇸 🚺 American Female 1': 'af_1',
 '🇺🇸 🚺 Alloy 🧪': 'af_alloy',
 '🇺🇸 🚺 Bella': 'af_bella',
 '🇺🇸 🚺 Jessica 🧪': 'af_jessica',
@@ -223,7 +222,7 @@ with gr.Blocks() as basic_tts:
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text')
-            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='🧪 Experimental voices may be unstable. ⚔️ Arena voices are averages of other voices.')
+            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='⭐ Starred voices are averages of similar voices. 🧪 Experimental voices may be unstable.')
             with gr.Row():
                 random_btn = gr.Button('Random Text', variant='secondary')
                 generate_btn = gr.Button('Generate', variant='primary')
@@ -406,7 +405,7 @@ with gr.Blocks() as lf_tts:
             file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
             text = gr.Textbox(label='Input Text')
             file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
-            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='🧪 Experimental voices may be unstable. ⚔️ Arena voices are averages of other voices.')
+            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='⭐ Starred voices are averages of similar voices. 🧪 Experimental voices may be unstable.')
             with gr.Accordion('Text Settings', open=False):
                 skip_square_brackets = gr.Checkbox(True, label='Skip [Square Brackets]', info='Recommended for academic papers, Wikipedia articles, or texts with citations.')
                 newline_split = gr.Number(2, label='Newline Split', info='Split the input text on this many newlines. Affects how the text is segmented.', precision=0, minimum=0)
