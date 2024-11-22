@@ -2,7 +2,6 @@ from huggingface_hub import snapshot_download
 from katsu import Katsu
 from models import build_model
 import gradio as gr
-import noisereduce as nr
 import numpy as np
 import os
 import phonemizer
@@ -112,33 +111,15 @@ def tokenize(ps):
 # ⭐ Starred voices are averages of similar voices. 🧪 Experimental voices may be unstable.
 CHOICES = {
 '🇺🇸 🚺 American Female ⭐': 'af',
-'🇺🇸 🚺 American Female 1': 'af_1',
-'🇺🇸 🚺 Alloy 🧪': 'af_alloy',
 '🇺🇸 🚺 Bella': 'af_bella',
-'🇺🇸 🚺 Jessica 🧪': 'af_jessica',
-'🇺🇸 🚺 Nicole': 'af_nicole',
-'🇺🇸 🚺 Nova 🧪': 'af_nova',
-'🇺🇸 🚺 River 🧪': 'af_river',
 '🇺🇸 🚺 Sarah': 'af_sarah',
 '🇺🇸 🚺 Sky 🧪': 'af_sky',
-'🇺🇸 🚹 Adam': 'am_adam',
-'🇺🇸 🚹 Echo 🧪': 'am_echo',
-'🇺🇸 🚹 Eric 🧪': 'am_eric',
-'🇺🇸 🚹 Liam 🧪': 'am_liam',
+'🇺🇸 🚹 Adam 🧪': 'am_adam',
 '🇺🇸 🚹 Michael': 'am_michael',
-'🇺🇸 🚹 Onyx 🧪': 'am_onyx',
-'🇬🇧 🚺 British Female 0': 'bf_0',
-'🇬🇧 🚺 Alice 🧪': 'bf_alice',
-'🇬🇧 🚺 Lily 🧪': 'bf_lily',
-'🇬🇧 🚹 British Male 0': 'bm_0',
-'🇬🇧 🚹 British Male 1': 'bm_1',
-'🇬🇧 🚹 British Male 2': 'bm_2',
-'🇬🇧 🚹 Daniel 🧪': 'bm_daniel',
-'🇬🇧 🚹 Fable 🧪': 'bm_fable',
-'🇬🇧 🚹 George 🧪': 'bm_george',
-'🇯🇵 🚺 Japanese Female 0': 'jf_0',
+'🇬🇧 🚹 Lewis': 'bm_lewis',
+'🇯🇵 🚺 Japanese Female 🧪': 'jf_0',
 }
-VOICES = {k: torch.load(os.path.join(snapshot, 'voices', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()}
+VOICES = {k: torch.load(os.path.join(snapshot, 'voicepacks', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()}
 
 np_log_99 = np.log(99)
 def s_curve(p):
@@ -155,7 +136,7 @@ SAMPLE_RATE = 24000
 @spaces.GPU(duration=10)
 @torch.no_grad()
 def forward(tokens, voice, speed):
-    ref_s = VOICES[voice]
+    ref_s = VOICES[voice][len(tokens)]
     tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
     input_lengths = torch.LongTensor([tokens.shape[-1]]).to(device)
     text_mask = length_to_mask(input_lengths).to(device)
@@ -178,7 +159,7 @@ def forward(tokens, voice, speed):
     asr = t_en @ pred_aln_trg.unsqueeze(0).to(device)
     return model.decoder(asr, F0_pred, N_pred, ref_s[:, :128]).squeeze().cpu().numpy()
 
-def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000):
+def generate(text, voice, ps=None, speed=1.0, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000):
     if voice not in VOICES:
         # Ensure stability for https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
         voice = 'af'
@@ -194,8 +175,6 @@ def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=4000
     except gr.exceptions.Error as e:
         raise gr.Error(e)
         return (None, '')
-    if reduce_noise > 0:
-        out = nr.reduce_noise(y=out, sr=SAMPLE_RATE, prop_decrease=reduce_noise, n_fft=512)
     opening_cut = int(opening_cut / speed)
     if opening_cut > 0:
         out = out[opening_cut:]
@@ -216,6 +195,9 @@ def generate(text, voice, ps=None, speed=1.0, reduce_noise=0.5, opening_cut=4000
         out = np.concatenate([out, np.zeros(pad_after)])
     return ((SAMPLE_RATE, out), ps)
 
+def toggle_autoplay(autoplay):
+    return gr.Audio(interactive=False, label='Output Audio', autoplay=autoplay)
+
 with gr.Blocks() as basic_tts:
     with gr.Row():
         gr.Markdown('Generate speech for one segment of text (up to 510 tokens) using Kokoro, a TTS model with 80 million parameters.')
@@ -234,12 +216,12 @@ with gr.Blocks() as basic_tts:
                     phonemize_btn = gr.Button('Tokenize Input Text', variant='primary')
             phonemize_btn.click(phonemize, inputs=[text, voice], outputs=[in_ps])
         with gr.Column():
-            audio = gr.Audio(interactive=False, label='Output Audio')
+            audio = gr.Audio(interactive=False, label='Output Audio', autoplay=True)
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
     with gr.Accordion('Audio Settings', open=False):
         with gr.Row():
-            reduce_noise = gr.Slider(minimum=0, maximum=1, value=0.5, label='Reduce Noise', info='👻 Fix it in post: non-stationary noise reduction via spectral gating.')
+            autoplay = gr.Checkbox(value=True, label='Autoplay')
         with gr.Row():
             speed = gr.Slider(minimum=0.5, maximum=2.0, value=1.0, step=0.1, label='Speed', info='⚡️ Adjust the speed of the audio. The settings below are auto-scaled by speed.')
         with gr.Row():
@@ -257,15 +239,18 @@ with gr.Blocks() as basic_tts:
                 pad_before = gr.Slider(minimum=0, maximum=24000, value=5000, step=1000, label='Pad Before', info='🔇 How many samples of silence to insert before the start.')
             with gr.Column():
                 pad_after = gr.Slider(minimum=0, maximum=24000, value=5000, step=1000, label='Pad After', info='🔇 How many samples of silence to append after the end.')
-    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, reduce_noise, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after], outputs=[audio, out_ps])
+    autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
+    text.submit(generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after], outputs=[audio, out_ps])
 
 @spaces.GPU
 @torch.no_grad()
 def lf_forward(token_lists, voice, speed):
-    ref_s = VOICES[voice]
-    s = ref_s[:, 128:]
+    voicepack = VOICES[voice]
     outs = []
     for tokens in token_lists:
+        ref_s = voicepack[len(tokens)]
+        s = ref_s[:, 128:]
         tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
         input_lengths = torch.LongTensor([tokens.shape[-1]]).to(device)
         text_mask = length_to_mask(input_lengths).to(device)
@@ -340,7 +325,7 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     segments = [row for t in texts for row in recursive_split(t, voice)]
     return [(i, *row) for i, row in enumerate(segments)]
 
-def lf_generate(segments, voice, speed=1.0, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000, pad_between=10000):
+def lf_generate(segments, voice, speed=1.0, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000, pad_between=10000):
     token_lists = list(map(tokenize, segments['Tokens']))
     wavs = []
     opening_cut = int(opening_cut / speed)
@@ -357,8 +342,6 @@ def lf_generate(segments, voice, speed=1.0, reduce_noise=0.5, opening_cut=4000, 
                 raise gr.Error(e)
             break
         for out in outs:
-            if reduce_noise > 0:
-                out = nr.reduce_noise(y=out, sr=SAMPLE_RATE, prop_decrease=reduce_noise, n_fft=512)
             if opening_cut > 0:
                 out = out[opening_cut:]
             if closing_cut > 0:
@@ -416,8 +399,6 @@ with gr.Blocks() as lf_tts:
             audio = gr.Audio(interactive=False, label='Output Audio')
             with gr.Accordion('Audio Settings', open=False):
                 with gr.Row():
-                    reduce_noise = gr.Slider(minimum=0, maximum=1, value=0.5, label='Reduce Noise', info='👻 Fix it in post: non-stationary noise reduction via spectral gating.')
-                with gr.Row():
                     speed = gr.Slider(minimum=0.5, maximum=2.0, value=1.0, step=0.1, label='Speed', info='⚡️ Adjust the speed of the audio. The settings below are auto-scaled by speed.')
                 with gr.Row():
                     with gr.Column():
@@ -440,7 +421,7 @@ with gr.Blocks() as lf_tts:
         segments = gr.Dataframe(headers=['#', 'Text', 'Tokens', 'Length'], row_count=(1, 'dynamic'), col_count=(4, 'fixed'), label='Segments', interactive=False, wrap=True)
         segments.change(fn=did_change_segments, inputs=[segments], outputs=[segment_btn, generate_btn])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_btn.click(lf_generate, inputs=[segments, voice, speed, reduce_noise, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after, pad_between], outputs=[audio])
+    generate_btn.click(lf_generate, inputs=[segments, voice, speed, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after, pad_between], outputs=[audio])
 
 with gr.Blocks() as about:
     gr.Markdown("""
@@ -452,11 +433,6 @@ The weights are currently private, but a free public demo is hosted at https://h
 The model was trained on 1x A100-class 80GB instances rented from [Vast.ai](https://cloud.vast.ai/?ref_id=79907).<sup>[3]</sup><br/>
 Vast was chosen over other compute providers due to its competitive on-demand hourly rates.<br/>
 The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
-
-### Updates
-This Space and the underlying Kokoro model are both under development and subject to change.<br/>
-Last model update: 2024 Nov 15<br/>
-Model trained by: Raven (@rzvzn on Discord)
 
 ### Licenses
 Inference code: MIT<br/>
@@ -471,6 +447,9 @@ Random Japanese texts: CC0 public domain<sup>[6]</sup>
 4. eSpeak NG | https://github.com/espeak-ng/espeak-ng
 5. Quotable Data | https://github.com/quotable-io/data/blob/master/data/quotes.json
 6. Common Voice Japanese sentences | https://github.com/common-voice/common-voice/tree/main/server/data/ja
+
+### Contact
+@rzvzn on Discord
 """)
 
 with gr.Blocks() as api_info:
@@ -499,10 +478,19 @@ print(out_ps)
 Note that this Space and the underlying Kokoro model are both under development and subject to change. Reliability is not guaranteed. Hugging Face and/or Gradio might enforce their own rate limits.
 """)
 
+with gr.Blocks() as version_info:
+    gr.Markdown("""
+| Model Version | Date | Validation losses (mel/dur/f0) |
+| ------- | ---- | ------------------------------ |
+| v0.19 | 2024 Nov 22 | 0.261 / 0.627 / 1.897 |
+| v0.16 | 2024 Nov 15 | 0.263 / 0.646 / 1.934 |
+| v0.14 | 2024 Nov 12 | 0.262 / 0.642 / 1.889 |
+""")
+
 with gr.Blocks() as app:
     gr.TabbedInterface(
-        [basic_tts, lf_tts, about, api_info],
-        ['🗣️ Basic TTS', '📖 Long-Form', 'ℹ️ About', '🚀 Gradio API'],
+        [basic_tts, lf_tts, about, api_info, version_info],
+        ['🗣️ Basic TTS', '📖 Long-Form', 'ℹ️ About', '🚀 Gradio API', '📝 Version History'],
     )
 
 if __name__ == '__main__':
