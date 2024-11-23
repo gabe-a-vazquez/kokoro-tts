@@ -100,11 +100,11 @@ def phonemize(text, voice, norm=True):
     # https://en.wiktionary.org/wiki/kokoro#English
     if lang in 'ab':
         ps = ps.replace('kəkˈoːɹoʊ', 'kˈoʊkəɹoʊ').replace('kəkˈɔːɹəʊ', 'kˈəʊkəɹəʊ')
-        ps = ps.replace('ʲ', 'j').replace('r', 'ɹ').replace('x', 'k')
+        ps = ps.replace('ʲ', 'j').replace('r', 'ɹ').replace('x', 'k').replace('ɬ', 'l')
         ps = ps.replace(' z', 'z')
         ps = re.sub(r'(?<=[a-zɹː])(?=hˈʌndɹɪd)', ' ', ps)
         if lang == 'a':
-            ps = re.sub(r'(?<=nˈaɪn)ti(?=[;:,.!?¡¿—…"«»“” ]|$)', 'di', ps)
+            ps = re.sub(r'(?<=nˈaɪn)ti(?!ː)', 'di', ps)
     ps = ''.join(filter(lambda p: p in VOCAB, ps))
     if lang == 'j' and any(p in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' for p in ps):
         gr.Warning('Japanese tokenizer does not handle English letters.')
