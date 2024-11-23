@@ -12,22 +12,22 @@ import spaces
 import torch
 import yaml
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+CUDA_AVAILABLE = torch.cuda.is_available()
 
 snapshot = snapshot_download(repo_id='hexgrad/kokoro', allow_patterns=['*.pt', '*.pth', '*.yml'], use_auth_token=os.environ['TOKEN'])
 config = yaml.safe_load(open(os.path.join(snapshot, 'config.yml')))
-model = build_model(config['model_params'])
-_ = [model[key].eval() for key in model]
-_ = [model[key].to(device) for key in model]
-for key, state_dict in torch.load(os.path.join(snapshot, 'net.pth'), map_location='cpu', weights_only=True)['net'].items():
-    assert key in model, key
-    try:
-        model[key].load_state_dict(state_dict)
-    except:
-        state_dict = {k[7:]: v for k, v in state_dict.items()}
-        model[key].load_state_dict(state_dict, strict=False)
 
-PARAM_COUNT = sum(p.numel() for value in model.values() for p in value.parameters())
+models = {device: build_model(config['model_params'], device) for device in ['cpu'] + (['cuda'] if CUDA_AVAILABLE else [])}
+for key, state_dict in torch.load(os.path.join(snapshot, 'net.pth'), map_location='cpu', weights_only=True)['net'].items():
+    for device in models:
+        assert key in models[device], key
+        try:
+            models[device][key].load_state_dict(state_dict)
+        except:
+            state_dict = {k[7:]: v for k, v in state_dict.items()}
+            models[device][key].load_state_dict(state_dict, strict=False)
+
+PARAM_COUNT = sum(p.numel() for value in models['cpu'].values() for p in value.parameters())
 assert PARAM_COUNT < 82_000_000, PARAM_COUNT
 
 random_texts = {}
@@ -118,7 +118,7 @@ def phonemize(text, voice, norm=True):
             ps = re.sub(r'(?<=nˈaɪn)ti(?!ː)', 'di', ps)
     ps = ''.join(filter(lambda p: p in VOCAB, ps))
     if lang == 'j' and any(p in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' for p in ps):
-        gr.Warning('Japanese tokenizer does not handle English letters.')
+        gr.Warning('Japanese tokenizer does not handle English letters')
     return ps.strip()
 
 def length_to_mask(lengths):
@@ -154,7 +154,7 @@ CHOICES = {
 '🇬🇧 🚹 Lewis 🧪': 'bm_lewis',
 '🇯🇵 🚺 Japanese Female': 'jf_0',
 }
-VOICES = {k: torch.load(os.path.join(snapshot, 'voicepacks', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()}
+VOICES = {device: {k: torch.load(os.path.join(snapshot, 'voicepacks', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()} for device in models}
 
 np_log_99 = np.log(99)
 def s_curve(p):
@@ -168,19 +168,18 @@ def s_curve(p):
 
 SAMPLE_RATE = 24000
 
-@spaces.GPU(duration=10)
 @torch.no_grad()
-def forward(tokens, voice, speed):
-    ref_s = VOICES[voice][len(tokens)]
+def forward(tokens, voice, speed, device='cpu'):
+    ref_s = VOICES[device][voice][len(tokens)]
     tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
     input_lengths = torch.LongTensor([tokens.shape[-1]]).to(device)
     text_mask = length_to_mask(input_lengths).to(device)
-    bert_dur = model.bert(tokens, attention_mask=(~text_mask).int())
-    d_en = model.bert_encoder(bert_dur).transpose(-1, -2)
+    bert_dur = models[device].bert(tokens, attention_mask=(~text_mask).int())
+    d_en = models[device].bert_encoder(bert_dur).transpose(-1, -2)
     s = ref_s[:, 128:]
-    d = model.predictor.text_encoder(d_en, s, input_lengths, text_mask)
-    x, _ = model.predictor.lstm(d)
-    duration = model.predictor.duration_proj(x)
+    d = models[device].predictor.text_encoder(d_en, s, input_lengths, text_mask)
+    x, _ = models[device].predictor.lstm(d)
+    duration = models[device].predictor.duration_proj(x)
     duration = torch.sigmoid(duration).sum(axis=-1) / speed
     pred_dur = torch.round(duration).clamp(min=1).long()
     pred_aln_trg = torch.zeros(input_lengths, pred_dur.sum().item())
@@ -189,12 +188,16 @@ def forward(tokens, voice, speed):
         pred_aln_trg[i, c_frame:c_frame + pred_dur[0,i].item()] = 1
         c_frame += pred_dur[0,i].item()
     en = d.transpose(-1, -2) @ pred_aln_trg.unsqueeze(0).to(device)
-    F0_pred, N_pred = model.predictor.F0Ntrain(en, s)
-    t_en = model.text_encoder(tokens, input_lengths, text_mask)
+    F0_pred, N_pred = models[device].predictor.F0Ntrain(en, s)
+    t_en = models[device].text_encoder(tokens, input_lengths, text_mask)
     asr = t_en @ pred_aln_trg.unsqueeze(0).to(device)
-    return model.decoder(asr, F0_pred, N_pred, ref_s[:, :128]).squeeze().cpu().numpy()
+    return models[device].decoder(asr, F0_pred, N_pred, ref_s[:, :128]).squeeze().cpu().numpy()
 
-def generate(text, voice, ps=None, speed=1.0, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=0, pad_after=0):
+@spaces.GPU(duration=10)
+def forward_gpu(tokens, voice, speed):
+    return forward(tokens, voice, speed, device='cuda')
+
+def generate(text, voice, ps=None, speed=1.0, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, use_gpu=None):
     if voice not in VOICES:
         # Ensure stability for https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
         voice = 'af'
@@ -206,7 +209,10 @@ def generate(text, voice, ps=None, speed=1.0, opening_cut=4000, closing_cut=2000
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     try:
-        out = forward(tokens, voice, speed)
+        if use_gpu or (use_gpu is None and len(ps) > 99):
+            out = forward_gpu(tokens, voice, speed)
+        else:
+            out = forward(tokens, voice, speed)
     except gr.exceptions.Error as e:
         raise gr.Error(e)
         return (None, '')
@@ -222,12 +228,6 @@ def generate(text, voice, ps=None, speed=1.0, opening_cut=4000, closing_cut=2000
     ease_out = min(int(ease_out / speed), len(out)//2)
     for i in range(ease_out):
         out[-i-1] *= s_curve(i / ease_out)
-    pad_before = int(pad_before / speed)
-    if pad_before > 0:
-        out = np.concatenate([np.zeros(pad_before), out])
-    pad_after = int(pad_after / speed)
-    if pad_after > 0:
-        out = np.concatenate([out, np.zeros(pad_after)])
     return ((SAMPLE_RATE, out), ps)
 
 def toggle_autoplay(autoplay):
@@ -235,10 +235,8 @@ def toggle_autoplay(autoplay):
 
 with gr.Blocks() as basic_tts:
     with gr.Row():
-        gr.Markdown('Generate speech for one segment of text (up to 510 tokens) using Kokoro, a TTS model with 80 million parameters.')
-    with gr.Row():
         with gr.Column():
-            text = gr.Textbox(label='Input Text')
+            text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text using Kokoro, a TTS model with 80 million parameters.')
             voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='⭐ Starred voices are more stable. 🧪 Experimental voices are less stable.')
             with gr.Row():
                 random_btn = gr.Button('Random Text', variant='secondary')
@@ -252,36 +250,36 @@ with gr.Blocks() as basic_tts:
             phonemize_btn.click(phonemize, inputs=[text, voice], outputs=[in_ps])
         with gr.Column():
             audio = gr.Audio(interactive=False, label='Output Audio', autoplay=True)
+            autoplay = gr.Checkbox(value=True, label='Autoplay')
+            autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
+    with gr.Row():
+        use_gpu = gr.Radio(
+            [('CPU', False), ('Force GPU', True), ('Dynamic', None)],
+            value=None if CUDA_AVAILABLE else False, label='⚙️ Hardware',
+            info='CPU: unlimited, ~faster <100 tokens. GPU: limited usage quota, ~faster 100+ tokens. Dynamic: switches based on # of tokens.',
+            interactive=CUDA_AVAILABLE
+        )
     with gr.Accordion('Audio Settings', open=False):
         with gr.Row():
-            autoplay = gr.Checkbox(value=True, label='Autoplay')
-        with gr.Row():
-            speed = gr.Slider(minimum=0.5, maximum=2.0, value=1.0, step=0.1, label='Speed', info='⚡️ Adjust the speed of the audio. The settings below are auto-scaled by speed.')
+            speed = gr.Slider(minimum=0.5, maximum=2.0, value=1.0, step=0.1, label='⚡️ Speed', info='Adjust the speed of the audio; the settings below are auto-scaled by speed')
         with gr.Row():
             with gr.Column():
-                opening_cut = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='Opening Cut', info='✂️ Cut this many samples from the start.')
+                opening_cut = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='✂️ Opening Cut', info='Cut this many samples from the start')
             with gr.Column():
-                closing_cut = gr.Slider(minimum=0, maximum=24000, value=2000, step=1000, label='Closing Cut', info='✂️ Cut this many samples from the end.')
+                closing_cut = gr.Slider(minimum=0, maximum=24000, value=2000, step=1000, label='🎬 Closing Cut', info='Cut this many samples from the end')
         with gr.Row():
             with gr.Column():
-                ease_in = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='Ease In', info='🚀 Ease in for this many samples, after opening cut.')
+                ease_in = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='🎢 Ease In', info='Ease in for this many samples, after opening cut')
             with gr.Column():
-                ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='Ease Out', info='📐 Ease out for this many samples, before closing cut.')
-        with gr.Row():
-            with gr.Column():
-                pad_before = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='Pad Before', info='🔇 How many samples of silence to insert before the start.')
-            with gr.Column():
-                pad_after = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='Pad After', info='🔇 How many samples of silence to append after the end.')
-    autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
-    text.submit(generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after], outputs=[audio, out_ps])
-    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after], outputs=[audio, out_ps])
+                ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='🛝 Ease Out', info='Ease out for this many samples, before closing cut')
+    text.submit(generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu], outputs=[audio, out_ps])
 
-@spaces.GPU
 @torch.no_grad()
-def lf_forward(token_lists, voice, speed):
-    voicepack = VOICES[voice]
+def lf_forward(token_lists, voice, speed, device='cpu'):
+    voicepack = VOICES[device][voice]
     outs = []
     for tokens in token_lists:
         ref_s = voicepack[len(tokens)]
@@ -289,11 +287,11 @@ def lf_forward(token_lists, voice, speed):
         tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
         input_lengths = torch.LongTensor([tokens.shape[-1]]).to(device)
         text_mask = length_to_mask(input_lengths).to(device)
-        bert_dur = model.bert(tokens, attention_mask=(~text_mask).int())
-        d_en = model.bert_encoder(bert_dur).transpose(-1, -2)
-        d = model.predictor.text_encoder(d_en, s, input_lengths, text_mask)
-        x, _ = model.predictor.lstm(d)
-        duration = model.predictor.duration_proj(x)
+        bert_dur = models[device].bert(tokens, attention_mask=(~text_mask).int())
+        d_en = models[device].bert_encoder(bert_dur).transpose(-1, -2)
+        d = models[device].predictor.text_encoder(d_en, s, input_lengths, text_mask)
+        x, _ = models[device].predictor.lstm(d)
+        duration = models[device].predictor.duration_proj(x)
         duration = torch.sigmoid(duration).sum(axis=-1) / speed
         pred_dur = torch.round(duration).clamp(min=1).long()
         pred_aln_trg = torch.zeros(input_lengths, pred_dur.sum().item())
@@ -302,11 +300,15 @@ def lf_forward(token_lists, voice, speed):
             pred_aln_trg[i, c_frame:c_frame + pred_dur[0,i].item()] = 1
             c_frame += pred_dur[0,i].item()
         en = d.transpose(-1, -2) @ pred_aln_trg.unsqueeze(0).to(device)
-        F0_pred, N_pred = model.predictor.F0Ntrain(en, s)
-        t_en = model.text_encoder(tokens, input_lengths, text_mask)
+        F0_pred, N_pred = models[device].predictor.F0Ntrain(en, s)
+        t_en = models[device].text_encoder(tokens, input_lengths, text_mask)
         asr = t_en @ pred_aln_trg.unsqueeze(0).to(device)
-        outs.append(model.decoder(asr, F0_pred, N_pred, ref_s[:, :128]).squeeze().cpu().numpy())
+        outs.append(models[device].decoder(asr, F0_pred, N_pred, ref_s[:, :128]).squeeze().cpu().numpy())
     return outs
+
+@spaces.GPU
+def lf_forward_gpu(token_lists, voice, speed):
+    return lf_forward(token_lists, voice, speed, device='cuda')
 
 def resplit_strings(arr):
     # Handle edge cases
@@ -360,7 +362,7 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     segments = [row for t in texts for row in recursive_split(t, voice)]
     return [(i, *row) for i, row in enumerate(segments)]
 
-def lf_generate(segments, voice, speed=1.0, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000, pad_between=10000):
+def lf_generate(segments, voice, speed=1.0, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_between=10000, use_gpu=True):
     token_lists = list(map(tokenize, segments['Tokens']))
     wavs = []
     opening_cut = int(opening_cut / speed)
@@ -369,7 +371,10 @@ def lf_generate(segments, voice, speed=1.0, opening_cut=4000, closing_cut=2000, 
     batch_size = 100
     for i in range(0, len(token_lists), batch_size):
         try:
-            outs = lf_forward(token_lists[i:i+batch_size], voice, speed)
+            if use_gpu:
+                outs = lf_forward_gpu(token_lists[i:i+batch_size], voice, speed)
+            else:
+                outs = lf_forward(token_lists[i:i+batch_size], voice, speed)
         except gr.exceptions.Error as e:
             if wavs:
                 gr.Warning(str(e))
@@ -390,12 +395,6 @@ def lf_generate(segments, voice, speed=1.0, opening_cut=4000, closing_cut=2000, 
             if wavs and pad_between > 0:
                 wavs.append(np.zeros(pad_between))
             wavs.append(out)
-    pad_before = int(pad_before / speed)
-    if pad_before > 0:
-        wavs.insert(0, np.zeros(pad_before))
-    pad_after = int(pad_after / speed)
-    if pad_after > 0:
-        wavs.append(np.zeros(pad_after))
     return (SAMPLE_RATE, np.concatenate(wavs)) if wavs else None
 
 def did_change_segments(segments):
@@ -417,46 +416,44 @@ def extract_text(file):
 
 with gr.Blocks() as lf_tts:
     with gr.Row():
-        gr.Markdown('Generate speech in batches of 100 text segments and automatically join them together. This may exhaust your ZeroGPU quota.')
-    with gr.Row():
         with gr.Column():
             file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
-            text = gr.Textbox(label='Input Text')
+            text = gr.Textbox(label='Input Text', info='Generate speech in batches of 100 text segments and automatically join them together.')
             file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
             voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='⭐ Starred voices are more stable. 🧪 Experimental voices are less stable.')
             with gr.Accordion('Text Settings', open=False):
-                skip_square_brackets = gr.Checkbox(True, label='Skip [Square Brackets]', info='Recommended for academic papers, Wikipedia articles, or texts with citations.')
+                skip_square_brackets = gr.Checkbox(True, label='Skip [Square Brackets]', info='Recommended for academic papers, Wikipedia articles, or texts with citations')
                 newline_split = gr.Number(2, label='Newline Split', info='Split the input text on this many newlines. Affects how the text is segmented.', precision=0, minimum=0)
             with gr.Row():
                 segment_btn = gr.Button('Tokenize', variant='primary')
                 generate_btn = gr.Button('Generate x0', variant='secondary', interactive=False)
         with gr.Column():
             audio = gr.Audio(interactive=False, label='Output Audio')
+            use_gpu = gr.Checkbox(value=CUDA_AVAILABLE, label='Use ZeroGPU', info='🚀 ZeroGPU is fast but has a limited usage quota', interactive=CUDA_AVAILABLE)
+            use_gpu.change(
+                fn=lambda v: gr.Checkbox(value=v, label='Use ZeroGPU', info='🚀 ZeroGPU is fast but has a limited usage quota' if v else '🐌 CPU is slow but unlimited'),
+                inputs=[use_gpu], outputs=[use_gpu]
+            )
             with gr.Accordion('Audio Settings', open=False):
                 with gr.Row():
-                    speed = gr.Slider(minimum=0.5, maximum=2.0, value=1.0, step=0.1, label='Speed', info='⚡️ Adjust the speed of the audio. The settings below are auto-scaled by speed.')
+                    speed = gr.Slider(minimum=0.5, maximum=2.0, value=1.0, step=0.1, label='⚡️ Speed', info='Adjust the speed of the audio; the settings below are auto-scaled by speed')
                 with gr.Row():
                     with gr.Column():
-                        opening_cut = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='Opening Cut', info='✂️ Cut this many samples from the start.')
+                        opening_cut = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='✂️ Opening Cut', info='Cut this many samples from the start')
                     with gr.Column():
-                        closing_cut = gr.Slider(minimum=0, maximum=24000, value=2000, step=1000, label='Closing Cut', info='✂️ Cut this many samples from the end.')
+                        closing_cut = gr.Slider(minimum=0, maximum=24000, value=2000, step=1000, label='🎬 Closing Cut', info='Cut this many samples from the end')
                 with gr.Row():
                     with gr.Column():
-                        ease_in = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='Ease In', info='🚀 Ease in for this many samples, after opening cut.')
+                        ease_in = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='🎢 Ease In', info='Ease in for this many samples, after opening cut')
                     with gr.Column():
-                        ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='Ease Out', info='📐 Ease out for this many samples, before closing cut.')
+                        ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='🛝 Ease Out', info='Ease out for this many samples, before closing cut')
                 with gr.Row():
-                    with gr.Column():
-                        pad_before = gr.Slider(minimum=0, maximum=24000, value=5000, step=1000, label='Pad Before', info='🔇 How many samples of silence to insert before the start.')
-                    with gr.Column():
-                        pad_after = gr.Slider(minimum=0, maximum=24000, value=5000, step=1000, label='Pad After', info='🔇 How many samples of silence to append after the end.')
-                with gr.Row():
-                    pad_between = gr.Slider(minimum=0, maximum=24000, value=10000, step=1000, label='Pad Between', info='🔇 How many samples of silence to insert between segments.')
+                    pad_between = gr.Slider(minimum=0, maximum=24000, value=10000, step=1000, label='🔇 Pad Between', info='How many samples of silence to insert between segments')
     with gr.Row():
         segments = gr.Dataframe(headers=['#', 'Text', 'Tokens', 'Length'], row_count=(1, 'dynamic'), col_count=(4, 'fixed'), label='Segments', interactive=False, wrap=True)
         segments.change(fn=did_change_segments, inputs=[segments], outputs=[segment_btn, generate_btn])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_btn.click(lf_generate, inputs=[segments, voice, speed, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after, pad_between], outputs=[audio])
+    generate_btn.click(lf_generate, inputs=[segments, voice, speed, opening_cut, closing_cut, ease_in, ease_out, pad_between, use_gpu], outputs=[audio])
 
 with gr.Blocks() as about:
     gr.Markdown("""

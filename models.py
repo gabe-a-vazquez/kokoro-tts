@@ -549,7 +549,7 @@ def recursive_munch(d):
     else:
         return d
 
-def build_model(args):
+def build_model(args, device):
     args = recursive_munch(args)
     assert args.decoder.type == 'istftnet', 'Decoder type unknown'
     decoder = Decoder(dim_in=args.hidden_dim, style_dim=args.style_dim, dim_out=args.n_mels,
@@ -562,10 +562,16 @@ def build_model(args):
     text_encoder = TextEncoder(channels=args.hidden_dim, kernel_size=5, depth=args.n_layer, n_symbols=args.n_token)
     predictor = ProsodyPredictor(style_dim=args.style_dim, d_hid=args.hidden_dim, nlayers=args.n_layer, max_dur=args.max_dur, dropout=args.dropout)
     bert = load_plbert()
-    return Munch(
-        bert=bert,
-        bert_encoder=nn.Linear(bert.config.hidden_size, args.hidden_dim),
-        predictor=predictor,
-        decoder=decoder,
-        text_encoder=text_encoder,
+    bert_encoder = nn.Linear(bert.config.hidden_size, args.hidden_dim)
+    for parent in [bert, bert_encoder, predictor, decoder, text_encoder]:
+        for child in parent.children():
+            if isinstance(child, nn.RNNBase):
+                child.flatten_parameters()
+    model = Munch(
+        bert=bert.to(device).eval(),
+        bert_encoder=bert_encoder.to(device).eval(),
+        predictor=predictor.to(device).eval(),
+        decoder=decoder.to(device).eval(),
+        text_encoder=text_encoder.to(device).eval(),
     )
+    return model
