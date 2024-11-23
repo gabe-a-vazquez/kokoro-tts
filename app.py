@@ -46,7 +46,8 @@ def parens_to_angles(s):
     return s.replace('(', '«').replace(')', '»')
 
 def split_num(num):
-    if '.' not in num:
+    num = num.group()
+    if '.' in num:
         a, b = num.split('.')
         b = ' '.join(b)
         return f'{a} point {b}'
