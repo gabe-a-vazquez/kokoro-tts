@@ -198,7 +198,7 @@ def forward_gpu(tokens, voice, speed):
     return forward(tokens, voice, speed, device='cuda')
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice, ps=None, speed=1, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000, use_gpu=None):
+def generate(text, voice, ps, speed, _reduce_noise, opening_cut, closing_cut, ease_in, ease_out, _pad_before, _pad_after, use_gpu):
     return _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu)
 
 def _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu):
@@ -365,7 +365,7 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     segments = [row for t in texts for row in recursive_split(t, voice)]
     return [(i, *row) for i, row in enumerate(segments)]
 
-def lf_generate(segments, voice, speed=1.0, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_between=10000, use_gpu=True):
+def lf_generate(segments, voice, speed, opening_cut, closing_cut, ease_in, ease_out, pad_between, use_gpu):
     token_lists = list(map(tokenize, segments['Tokens']))
     wavs = []
     opening_cut = int(opening_cut / speed)
