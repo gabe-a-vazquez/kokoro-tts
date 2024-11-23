@@ -48,19 +48,29 @@ def parens_to_angles(s):
 def split_num(num):
     num = num.group()
     if '.' in num:
+        # Decimal
         a, b = num.split('.')
         return ' point '.join([a, ' '.join(b)])
+    elif ':' in num:
+        # Time
+        h, m = [int(n) for n in num.split(':')]
+        if m == 0:
+            return f"{h} o'clock"
+        elif m < 10:
+            return f'{h} oh {m}'
+        return f'{h} {m}'
+    # Year
     year = int(num[:4])
     if year < 1100 or year % 1000 < 10:
         return num
-    left, right = num[:2], num[2:4], 
+    left, right = num[:2], int(num[2:4])
     s = 's' if num.endswith('s') else ''
     if 100 <= year % 1000 <= 999:
-        if right == '00':
+        if right == 0:
             return f'{left} hundred{s}'
-        elif int(right) < 10:
+        elif right < 10:
             return f'{left} oh {right}{s}'
-    return f'{left} {right}{s}'
+    return f'{left} {right:02}{s}'
 
 def normalize(text):
     # TODO: Custom text normalization rules?
@@ -75,11 +85,9 @@ def normalize(text):
     text = re.sub(r'[^\S \n]', ' ', text)
     text = re.sub(r'  +', ' ', text)
     text = re.sub(r'(?<=\n) +(?=\n)', '', text)
-    text = re.sub(r'\d*\.\d+|\b\d{4}s?\b', split_num, text)
+    text = re.sub(r'\d*\.\d+|\b\d{4}s?\b|(?<!:)\b(?:[1-9]|1[0-2]):[0-5]\d\b(?!:)', split_num, text)
     text = re.sub(r'(?<=\d),(?=\d)', '', text)
     text = re.sub(r'(?<=\d)-(?=\d)', ' to ', text) # TODO: could be minus
-    text = re.sub(r'(?<!:)\b(?:[1-9]|1[0-2]):00\b(?!:)', lambda m: m.group()[:-3] + " o'clock", text)
-    text = re.sub(r'(?<=\d):(?=\d)', ' ', text)
     text = re.sub(r'(?<=\d)S', ' S', text)
     text = re.sub(r"(?<=[A-Z])'?s", lambda m: m.group().upper(), text)
     text = re.sub(r'(?:[A-Za-z]\.){2,} [a-z]', lambda m: m.group().replace('.', '-'), text)
