@@ -108,16 +108,17 @@ VOCAB = get_vocab()
 def tokenize(ps):
     return [i for i in map(VOCAB.get, ps) if i is not None]
 
-# ⭐ Starred voices are averages of similar voices. 🧪 Experimental voices may be unstable.
+# ⭐ Starred voices are more stable. 🧪 Experimental voices are less stable.
 CHOICES = {
 '🇺🇸 🚺 American Female ⭐': 'af',
 '🇺🇸 🚺 Bella': 'af_bella',
+'🇺🇸 🚺 Nicole': 'af_nicole',
 '🇺🇸 🚺 Sarah': 'af_sarah',
 '🇺🇸 🚺 Sky 🧪': 'af_sky',
 '🇺🇸 🚹 Adam 🧪': 'am_adam',
 '🇺🇸 🚹 Michael': 'am_michael',
-'🇬🇧 🚹 Lewis': 'bm_lewis',
-'🇯🇵 🚺 Japanese Female 🧪': 'jf_0',
+'🇬🇧 🚹 Lewis 🧪': 'bm_lewis',
+'🇯🇵 🚺 Japanese Female': 'jf_0',
 }
 VOICES = {k: torch.load(os.path.join(snapshot, 'voicepacks', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()}
 
@@ -159,7 +160,7 @@ def forward(tokens, voice, speed):
     asr = t_en @ pred_aln_trg.unsqueeze(0).to(device)
     return model.decoder(asr, F0_pred, N_pred, ref_s[:, :128]).squeeze().cpu().numpy()
 
-def generate(text, voice, ps=None, speed=1.0, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000):
+def generate(text, voice, ps=None, speed=1.0, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=0, pad_after=0):
     if voice not in VOICES:
         # Ensure stability for https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
         voice = 'af'
@@ -204,7 +205,7 @@ with gr.Blocks() as basic_tts:
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text')
-            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='⭐ Starred voices are averages of similar voices. 🧪 Experimental voices may be unstable.')
+            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='⭐ Starred voices are more stable. 🧪 Experimental voices are less stable.')
             with gr.Row():
                 random_btn = gr.Button('Random Text', variant='secondary')
                 generate_btn = gr.Button('Generate', variant='primary')
@@ -236,9 +237,9 @@ with gr.Blocks() as basic_tts:
                 ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='Ease Out', info='📐 Ease out for this many samples, before closing cut.')
         with gr.Row():
             with gr.Column():
-                pad_before = gr.Slider(minimum=0, maximum=24000, value=5000, step=1000, label='Pad Before', info='🔇 How many samples of silence to insert before the start.')
+                pad_before = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='Pad Before', info='🔇 How many samples of silence to insert before the start.')
             with gr.Column():
-                pad_after = gr.Slider(minimum=0, maximum=24000, value=5000, step=1000, label='Pad After', info='🔇 How many samples of silence to append after the end.')
+                pad_after = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='Pad After', info='🔇 How many samples of silence to append after the end.')
     autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
     text.submit(generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after], outputs=[audio, out_ps])
     generate_btn.click(generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, pad_before, pad_after], outputs=[audio, out_ps])
@@ -388,7 +389,7 @@ with gr.Blocks() as lf_tts:
             file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
             text = gr.Textbox(label='Input Text')
             file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
-            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='⭐ Starred voices are averages of similar voices. 🧪 Experimental voices may be unstable.')
+            voice = gr.Dropdown(list(CHOICES.items()), label='Voice', info='⭐ Starred voices are more stable. 🧪 Experimental voices are less stable.')
             with gr.Accordion('Text Settings', open=False):
                 skip_square_brackets = gr.Checkbox(True, label='Skip [Square Brackets]', info='Recommended for academic papers, Wikipedia articles, or texts with citations.')
                 newline_split = gr.Number(2, label='Newline Split', info='Split the input text on this many newlines. Affects how the text is segmented.', precision=0, minimum=0)
@@ -433,6 +434,10 @@ The weights are currently private, but a free public demo is hosted at https://h
 The model was trained on 1x A100-class 80GB instances rented from [Vast.ai](https://cloud.vast.ai/?ref_id=79907).<sup>[3]</sup><br/>
 Vast was chosen over other compute providers due to its competitive on-demand hourly rates.<br/>
 The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
+
+### Voice Stability
+⭐ Starred voices are more stable. 🧪 Experimental voices are less stable.<br/>
+Unstable voices may be more likely to stumble or produce unnatural artifacts, especially on shorter texts.
 
 ### Licenses
 Inference code: MIT<br/>
