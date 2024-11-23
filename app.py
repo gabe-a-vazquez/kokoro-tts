@@ -70,7 +70,7 @@ def split_num(num):
             return f'{left} hundred{s}'
         elif right < 10:
             return f'{left} oh {right}{s}'
-    return f'{left} {right:02}{s}'
+    return f'{left} {right}{s}'
 
 def normalize(text):
     # TODO: Custom text normalization rules?
