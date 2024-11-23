@@ -56,11 +56,11 @@ def split_num(num):
     left, right = num[:2], num[2:4], 
     s = 's' if num.endswith('s') else ''
     if 100 <= year % 1000 <= 999:
-        if second_half == '00':
-            return f'{first_half} hundred{s}'
-        elif int(second_half) < 10:
-            return f'{first_half} oh {second_half}{s}'
-    return f'{first_half} {second_half}{s}'
+        if right == '00':
+            return f'{left} hundred{s}'
+        elif int(right) < 10:
+            return f'{left} oh {right}{s}'
+    return f'{left} {right}{s}'
 
 def normalize(text):
     # TODO: Custom text normalization rules?
