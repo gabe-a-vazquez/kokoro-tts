@@ -197,7 +197,7 @@ def forward(tokens, voice, speed, device='cpu'):
 def forward_gpu(tokens, voice, speed):
     return forward(tokens, voice, speed, device='cuda')
 
-def generate(text, voice, ps=None, speed=1.0, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, use_gpu=None):
+def generate(text, voice, ps=None, speed=1, reduce_noise=None, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=None, pad_after=None, use_gpu=None):
     if voice not in VOICES:
         # Ensure stability for https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
         voice = 'af'
@@ -263,19 +263,19 @@ with gr.Blocks() as basic_tts:
         )
     with gr.Accordion('Audio Settings', open=False):
         with gr.Row():
-            speed = gr.Slider(minimum=0.5, maximum=2.0, value=1.0, step=0.1, label='⚡️ Speed', info='Adjust the speed of the audio; the settings below are auto-scaled by speed')
+            speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speed of the audio; the settings below are auto-scaled by speed')
         with gr.Row():
             with gr.Column():
-                opening_cut = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='✂️ Opening Cut', info='Cut this many samples from the start')
+                opening_cut = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='✂️ Opening Cut', info='Cut samples from the start')
             with gr.Column():
-                closing_cut = gr.Slider(minimum=0, maximum=24000, value=2000, step=1000, label='🎬 Closing Cut', info='Cut this many samples from the end')
+                closing_cut = gr.Slider(minimum=0, maximum=24000, value=2000, step=1000, label='🎬 Closing Cut', info='Cut samples from the end')
         with gr.Row():
             with gr.Column():
-                ease_in = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='🎢 Ease In', info='Ease in for this many samples, after opening cut')
+                ease_in = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='🎢 Ease In', info='Ease in samples, after opening cut')
             with gr.Column():
-                ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='🛝 Ease Out', info='Ease out for this many samples, before closing cut')
-    text.submit(generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu], outputs=[audio, out_ps])
-    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu], outputs=[audio, out_ps])
+                ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='🛝 Ease Out', info='Ease out samples, before closing cut')
+    text.submit(generate, inputs=[text, voice, in_ps, None, speed, opening_cut, closing_cut, ease_in, ease_out, None, None, use_gpu], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, None, speed, opening_cut, closing_cut, ease_in, ease_out, None, None, use_gpu], outputs=[audio, out_ps])
 
 @torch.no_grad()
 def lf_forward(token_lists, voice, speed, device='cpu'):
@@ -436,7 +436,7 @@ with gr.Blocks() as lf_tts:
             )
             with gr.Accordion('Audio Settings', open=False):
                 with gr.Row():
-                    speed = gr.Slider(minimum=0.5, maximum=2.0, value=1.0, step=0.1, label='⚡️ Speed', info='Adjust the speed of the audio; the settings below are auto-scaled by speed')
+                    speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speed of the audio; the settings below are auto-scaled by speed')
                 with gr.Row():
                     with gr.Column():
                         opening_cut = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='✂️ Opening Cut', info='Cut this many samples from the start')
@@ -461,12 +461,6 @@ Kokoro is a frontier TTS model for its size. It has 80 million parameters,<sup>[
 
 The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`
 
-### Will this be open sourced?
-There currently isn't a release date scheduled for the weights. The inference code in this space is MIT licensed. The architecture was already published by Li et al, with MIT licensed code and pretrained weights.<sup>[2]</sup>
-
-### What does it mean if a voice is unstable?
-An unstable voice is more likely to stumble or produce unnatural artifacts, especially on short or strange texts.
-
 ### Compute
 The model was trained on 1x A100-class 80GB instances rented from [Vast.ai](https://cloud.vast.ai/?ref_id=79907).<sup>[3]</sup><br/>
 Vast was chosen over other compute providers due to its competitive on-demand hourly rates.<br/>
@@ -488,6 +482,22 @@ Random Japanese texts: CC0 public domain<sup>[6]</sup>
 
 ### Contact
 @rzvzn on Discord
+""")
+
+with gr.Blocks() as faq:
+    gr.Markdown("""
+### Will this be open sourced?
+There currently isn't a release date scheduled for the weights. The inference code in this space is MIT licensed. The StyleTTS 2 architecture was already published by Li et al, with MIT licensed code and pretrained weights.
+
+### What does it mean for a voice to be unstable?
+An unstable voice is more likely to stumble or produce unnatural artifacts, especially on short or strange texts.
+
+### CPU faster than ZeroGPU? How?
+The CPU seems to be a dedicated resource for this Space, whereas the ZeroGPU pool is shared dynamically allocated across all of HF. Obviously the latter demands some kind of queue & allocator system, which inevitably must add latency.
+
+For Basic TTS under 100 tokens (~characters), only a few seconds of audio needs to be generated, so the actual compute is not that heavy. For these short bursts, the dedicated CPU can often compute the result faster than the total time it takes for you to: enter the ZeroGPU queue, wait to get allocated, and have a GPU compute and deliver the result.
+
+As you move beyond 100 tokens and especially closer to the ~500 token context window, the GPU catches up. And for Long-Form, since batches of 100 segments are processed at a time, the GPU should outspeed the CPU by 1-2 orders of magnitude.
 """)
 
 with gr.Blocks() as api_info:
@@ -527,8 +537,8 @@ with gr.Blocks() as version_info:
 
 with gr.Blocks() as app:
     gr.TabbedInterface(
-        [basic_tts, lf_tts, about, api_info, version_info],
-        ['🗣️ Basic TTS', '📖 Long-Form', 'ℹ️ About', '🚀 Gradio API', '📝 Version History'],
+        [basic_tts, lf_tts, about, faq, api_info, version_info],
+        ['🗣️ Basic TTS', '📖 Long-Form', 'ℹ️ About', '❓ FAQ', '🚀 Gradio API', '📝 Version History'],
     )
 
 if __name__ == '__main__':
