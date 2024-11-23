@@ -17,11 +17,6 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 snapshot = snapshot_download(repo_id='hexgrad/kokoro', allow_patterns=['*.pt', '*.pth', '*.yml'], use_auth_token=os.environ['TOKEN'])
 config = yaml.safe_load(open(os.path.join(snapshot, 'config.yml')))
 model = build_model(config['model_params'])
-for key, value in model.items():
-    for module in value.children():
-        if isinstance(module, torch.nn.RNNBase):
-            module.flatten_parameters()
-
 _ = [model[key].eval() for key in model]
 _ = [model[key].to(device) for key in model]
 for key, state_dict in torch.load(os.path.join(snapshot, 'net.pth'), map_location='cpu', weights_only=True)['net'].items():
@@ -50,6 +45,25 @@ def get_random_text(voice):
 def parens_to_angles(s):
     return s.replace('(', '«').replace(')', '»')
 
+def split_num(num):
+    if '.' not in num:
+        a, b = num.split('.')
+        b = ' '.join(b)
+        return f'{a} point {b}'
+    assert num.isdigit() and len(num) == 4, num
+    year = int(num)
+    if year < 1100 or year % 1000 < 10:
+        return num
+    first_half = num[:2]
+    second_half = num[2:]
+    second_half_int = int(second_half)
+    if 100 <= year % 1000 <= 999:
+        if second_half == '00':
+            return f'{first_half} hundred'
+        elif second_half_int < 10:
+            return f'{first_half} oh {second_half_int}'
+    return ' '.join([first_half, second_half])
+
 def normalize(text):
     # TODO: Custom text normalization rules?
     text = re.sub(r'\bD[Rr]\.(?= [A-Z])', 'Doctor', text)
@@ -63,7 +77,10 @@ def normalize(text):
     text = re.sub(r'[^\S \n]', ' ', text)
     text = re.sub(r'  +', ' ', text)
     text = re.sub(r'(?<=\n) +(?=\n)', '', text)
+    text = re.sub(r'\d*\.\d+|\b\d{4}\b', split_num, text)
     text = re.sub(r'(?<=\d),(?=\d)', '', text)
+    text = re.sub(r'(?<=\d)-(?=\d)', ' to ', text) # TODO: could be minus
+    text = re.sub(r'(?<=\d):(?=\d)', ' ', text)
     return parens_to_angles(text).strip()
 
 phonemizers = dict(
@@ -428,16 +445,18 @@ with gr.Blocks() as about:
     gr.Markdown("""
 Kokoro is a frontier TTS model for its size. It has 80 million parameters,<sup>[1]</sup> uses a lean StyleTTS 2 architecture,<sup>[2]</sup> and was trained on high-quality data.
 
-The weights are currently private, but a free public demo is hosted at https://hf.co/spaces/hexgrad/Kokoro-TTS
+The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`
+
+### Will this be open sourced?
+There currently isn't a release date scheduled for the weights. The inference code in this space is MIT licensed. The architecture was already published by Li et al, with MIT licensed code and pretrained weights.<sup>[2]</sup>
+
+### What does it mean if a voice is unstable?
+An unstable voice is more likely to stumble or produce unnatural artifacts, especially on short or strange texts.
 
 ### Compute
 The model was trained on 1x A100-class 80GB instances rented from [Vast.ai](https://cloud.vast.ai/?ref_id=79907).<sup>[3]</sup><br/>
 Vast was chosen over other compute providers due to its competitive on-demand hourly rates.<br/>
 The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
-
-### Voice Stability
-⭐ Starred voices are more stable. 🧪 Experimental voices are less stable.<br/>
-Unstable voices may be more likely to stumble or produce unnatural artifacts, especially on shorter texts.
 
 ### Licenses
 Inference code: MIT<br/>
@@ -446,7 +465,7 @@ Random English texts: Unknown<sup>[5]</sup><br/>
 Random Japanese texts: CC0 public domain<sup>[6]</sup>
 
 ### References
-1. Kokoro parameter count | https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L37
+1. Kokoro parameter count | https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L31
 2. StyleTTS 2 | https://github.com/yl4579/StyleTTS2
 3. Vast.ai referral link | https://cloud.vast.ai/?ref_id=79907
 4. eSpeak NG | https://github.com/espeak-ng/espeak-ng
