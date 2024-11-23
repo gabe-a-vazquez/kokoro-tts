@@ -78,9 +78,12 @@ def normalize(text):
     text = re.sub(r'\d*\.\d+|\b\d{4}s?\b', split_num, text)
     text = re.sub(r'(?<=\d),(?=\d)', '', text)
     text = re.sub(r'(?<=\d)-(?=\d)', ' to ', text) # TODO: could be minus
+    text = re.sub(r'(?<=\d):00\b', " o'clock", text)
     text = re.sub(r'(?<=\d):(?=\d)', ' ', text)
     text = re.sub(r'(?<=\d)S', ' S', text)
     text = re.sub(r"(?<=[A-Z])'?s", lambda m: m.group().upper(), text)
+    text = re.sub(r'(?:[A-Za-z]\.){2,} [a-z]', lambda m: m.group().replace('.', '-'), text)
+    text = re.sub(r'(?i)(?<=[A-Z])\.(?=[A-Z])', '-', text)
     return parens_to_angles(text).strip()
 
 phonemizers = dict(
@@ -101,8 +104,8 @@ def phonemize(text, voice, norm=True):
     if lang in 'ab':
         ps = ps.replace('kəkˈoːɹoʊ', 'kˈoʊkəɹoʊ').replace('kəkˈɔːɹəʊ', 'kˈəʊkəɹəʊ')
         ps = ps.replace('ʲ', 'j').replace('r', 'ɹ').replace('x', 'k').replace('ɬ', 'l')
-        ps = ps.replace(' z', 'z')
         ps = re.sub(r'(?<=[a-zɹː])(?=hˈʌndɹɪd)', ' ', ps)
+        ps = re.sub(r' z(?=[;:,.!?¡¿—…"«»“” ]|$)', 'z', ps)
         if lang == 'a':
             ps = re.sub(r'(?<=nˈaɪn)ti(?!ː)', 'di', ps)
     ps = ''.join(filter(lambda p: p in VOCAB, ps))
@@ -502,7 +505,7 @@ audio_path, out_ps = client.predict(
 
 # 4. Display the audio and print the output phonemes
 from IPython.display import display, Audio
-display(Audio(audio_path))
+display(Audio(audio_path, autoplay=True))
 print(out_ps)
 ```
 Note that this Space and the underlying Kokoro model are both under development and subject to change. Reliability is not guaranteed. Hugging Face and/or Gradio might enforce their own rate limits.
