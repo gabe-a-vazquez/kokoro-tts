@@ -78,7 +78,7 @@ def normalize(text):
     text = re.sub(r'\d*\.\d+|\b\d{4}s?\b', split_num, text)
     text = re.sub(r'(?<=\d),(?=\d)', '', text)
     text = re.sub(r'(?<=\d)-(?=\d)', ' to ', text) # TODO: could be minus
-    text = re.sub(r'(?<=\d):00\b', " o'clock", text)
+    text = re.sub(r'(?<!:)\b(?:[1-9]|1[0-2]):00\b(?!:)', lambda m: m.group()[:-3] + " o'clock", text)
     text = re.sub(r'(?<=\d):(?=\d)', ' ', text)
     text = re.sub(r'(?<=\d)S', ' S', text)
     text = re.sub(r"(?<=[A-Z])'?s", lambda m: m.group().upper(), text)
