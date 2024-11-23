@@ -103,7 +103,8 @@ def phonemize(text, voice, norm=True):
         ps = ps.replace('ʲ', 'j').replace('r', 'ɹ').replace('x', 'k')
         ps = ps.replace(' z', 'z')
         ps = re.sub(r'(?<=[a-zɹː])(?=hˈʌndɹɪd)', ' ', ps)
-        ps = re.sub(r'(?<=nˈaɪn)t[iɪ](?!ː)', ('d' if lang == 'a' else 't') + 'i', ps)
+        if lang == 'a':
+            ps = re.sub(r'(?<=nˈaɪn)ti(?=[;:,.!?¡¿—…"«»“” ]|$)', 'di', ps)
     ps = ''.join(filter(lambda p: p in VOCAB, ps))
     if lang == 'j' and any(p in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' for p in ps):
         gr.Warning('Japanese tokenizer does not handle English letters.')
