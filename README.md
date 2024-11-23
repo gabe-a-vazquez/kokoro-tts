@@ -1,5 +1,5 @@
 ---
-title: Kokoro TTS v0.19
+title: Kokoro TTS
 emoji: 🔊❤️🔊
 colorFrom: indigo
 colorTo: pink
