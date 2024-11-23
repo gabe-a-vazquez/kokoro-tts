@@ -81,6 +81,8 @@ def normalize(text):
     text = re.sub(r'(?<=\d),(?=\d)', '', text)
     text = re.sub(r'(?<=\d)-(?=\d)', ' to ', text) # TODO: could be minus
     text = re.sub(r'(?<=\d):(?=\d)', ' ', text)
+    text = re.sub(r'(?<=\d)S', ' S', text)
+    text = re.sub(r"(?<=[A-Z])'?s", lambda m: m.group().upper(), text)
     return parens_to_angles(text).strip()
 
 phonemizers = dict(
@@ -101,6 +103,8 @@ def phonemize(text, voice, norm=True):
     if lang in 'ab':
         ps = ps.replace('kəkˈoːɹoʊ', 'kˈoʊkəɹoʊ').replace('kəkˈɔːɹəʊ', 'kˈəʊkəɹəʊ')
         ps = ps.replace('ʲ', 'j').replace('r', 'ɹ').replace('x', 'k')
+        ps = ps.replace(' z', 'z')
+        ps = re.sub(r'(wˈʌn|tˈuː|θɹˈiː|fˈoːɹ|fˈaɪv|sˈɪks|sˈɛvən|ˈeɪt|nˈaɪn)(hˈʌndɹɪd)', r'\1 \2', ps)
     ps = ''.join(filter(lambda p: p in VOCAB, ps))
     if lang == 'j' and any(p in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' for p in ps):
         gr.Warning('Japanese tokenizer does not handle English letters.')
