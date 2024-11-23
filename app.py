@@ -197,9 +197,12 @@ def forward(tokens, voice, speed, device='cpu'):
 def forward_gpu(tokens, voice, speed):
     return forward(tokens, voice, speed, device='cuda')
 
+# Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice, ps=None, speed=1, reduce_noise=0.5, opening_cut=4000, closing_cut=2000, ease_in=3000, ease_out=1000, pad_before=5000, pad_after=5000, use_gpu=None):
+    return _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu)
+
+def _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu):
     if voice not in VOICES:
-        # Ensure stability for https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
         voice = 'af'
     ps = ps or phonemize(text, voice)
     tokens = tokenize(ps)
@@ -274,8 +277,8 @@ with gr.Blocks() as basic_tts:
                 ease_in = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='🎢 Ease In', info='Ease in samples, after opening cut')
             with gr.Column():
                 ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='🛝 Ease Out', info='Ease out samples, before closing cut')
-    text.submit(generate, inputs=[text, voice, in_ps, 0.5, speed, opening_cut, closing_cut, ease_in, ease_out, 5000, 5000, use_gpu], outputs=[audio, out_ps])
-    generate_btn.click(generate, inputs=[text, voice, in_ps, 0.5, speed, opening_cut, closing_cut, ease_in, ease_out, 5000, 5000, use_gpu], outputs=[audio, out_ps])
+    text.submit(_generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu], outputs=[audio, out_ps])
+    generate_btn.click(_generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu], outputs=[audio, out_ps])
 
 @torch.no_grad()
 def lf_forward(token_lists, voice, speed, device='cpu'):
