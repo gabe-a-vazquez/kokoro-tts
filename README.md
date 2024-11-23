@@ -1,8 +1,8 @@
 ---
 title: Kokoro TTS v0.19
-emoji: 🔊♥️🔊
+emoji: 🔊❤️🔊
 colorFrom: indigo
-colorTo: purple
+colorTo: pink
 sdk: gradio
 sdk_version: 5.6.0
 app_file: app.py
