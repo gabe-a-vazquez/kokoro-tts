@@ -50,19 +50,17 @@ def split_num(num):
     if '.' in num:
         a, b = num.split('.')
         return ' point '.join([a, ' '.join(b)])
-    assert num.isdigit() and len(num) == 4, num
-    year = int(num)
+    year = int(num[:4])
     if year < 1100 or year % 1000 < 10:
         return num
-    first_half = num[:2]
-    second_half = num[2:]
-    second_half_int = int(second_half)
+    left, right = num[:2], num[2:4], 
+    s = 's' if num.endswith('s') else ''
     if 100 <= year % 1000 <= 999:
         if second_half == '00':
-            return f'{first_half} hundred'
-        elif second_half_int < 10:
-            return f'{first_half} oh {second_half_int}'
-    return ' '.join([first_half, second_half])
+            return f'{first_half} hundred{s}'
+        elif int(second_half) < 10:
+            return f'{first_half} oh {second_half}{s}'
+    return f'{first_half} {second_half}{s}'
 
 def normalize(text):
     # TODO: Custom text normalization rules?
@@ -77,7 +75,7 @@ def normalize(text):
     text = re.sub(r'[^\S \n]', ' ', text)
     text = re.sub(r'  +', ' ', text)
     text = re.sub(r'(?<=\n) +(?=\n)', '', text)
-    text = re.sub(r'\d*\.\d+|\b\d{4}\b', split_num, text)
+    text = re.sub(r'\d*\.\d+|\b\d{4}s?\b', split_num, text)
     text = re.sub(r'(?<=\d),(?=\d)', '', text)
     text = re.sub(r'(?<=\d)-(?=\d)', ' to ', text) # TODO: could be minus
     text = re.sub(r'(?<=\d):(?=\d)', ' ', text)
@@ -104,7 +102,8 @@ def phonemize(text, voice, norm=True):
         ps = ps.replace('kəkˈoːɹoʊ', 'kˈoʊkəɹoʊ').replace('kəkˈɔːɹəʊ', 'kˈəʊkəɹəʊ')
         ps = ps.replace('ʲ', 'j').replace('r', 'ɹ').replace('x', 'k')
         ps = ps.replace(' z', 'z')
-        ps = re.sub(r'(wˈʌn|tˈuː|θɹˈiː|fˈoːɹ|fˈaɪv|sˈɪks|sˈɛvən|ˈeɪt|nˈaɪn)(hˈʌndɹɪd)', r'\1 \2', ps)
+        ps = re.sub(r'(?<=[a-zɹː])(?=hˈʌndɹɪd)', ' ', ps)
+        ps = re.sub(r'(?<=nˈaɪn)t[iɪ]', ('d' if lang == 'a' else 't') + 'i', ps)
     ps = ''.join(filter(lambda p: p in VOCAB, ps))
     if lang == 'j' and any(p in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' for p in ps):
         gr.Warning('Japanese tokenizer does not handle English letters.')
