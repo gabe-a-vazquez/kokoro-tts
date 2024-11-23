@@ -49,8 +49,7 @@ def split_num(num):
     num = num.group()
     if '.' in num:
         a, b = num.split('.')
-        b = ' '.join(b)
-        return f'{a} point {b}'
+        return ' point '.join([a, ' '.join(b)])
     assert num.isdigit() and len(num) == 4, num
     year = int(num)
     if year < 1100 or year % 1000 < 10:
@@ -99,7 +98,9 @@ def phonemize(text, voice, norm=True):
     # TODO: Custom phonemization rules?
     ps = parens_to_angles(ps)
     # https://en.wiktionary.org/wiki/kokoro#English
-    ps = ps.replace('kəkˈoːɹoʊ', 'kˈoʊkəɹoʊ').replace('kəkˈɔːɹəʊ', 'kˈəʊkəɹəʊ')
+    if lang in 'ab':
+        ps = ps.replace('kəkˈoːɹoʊ', 'kˈoʊkəɹoʊ').replace('kəkˈɔːɹəʊ', 'kˈəʊkəɹəʊ')
+        ps = ps.replace('ʲ', 'j').replace('r', 'ɹ').replace('x', 'k')
     ps = ''.join(filter(lambda p: p in VOCAB, ps))
     if lang == 'j' and any(p in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' for p in ps):
         gr.Warning('Japanese tokenizer does not handle English letters.')
