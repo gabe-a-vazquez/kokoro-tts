@@ -202,7 +202,7 @@ def generate(text, voice, ps=None, speed=1, reduce_noise=0.5, opening_cut=4000, 
     return _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu)
 
 def _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu):
-    if voice not in VOICES:
+    if voice not in VOICES['cpu']:
         voice = 'af'
     ps = ps or phonemize(text, voice)
     tokens = tokenize(ps)
