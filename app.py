@@ -220,12 +220,12 @@ def clamp_speed(speed):
     return speed
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice='af', ps=None, speed=1, trim=4000, *args):
+def generate(text, voice='af', ps=None, speed=1, _reduce_noise=0.5, trim=3000, _closing_cut=2000, _ease_in=3000, _ease_out=1000, _pad_before=5000, _pad_after=5000, use_gpu='auto'):
     voice = voice if voice in VOICES['cpu'] else 'af'
     ps = ps or phonemize(text, voice)
     speed = clamp_speed(speed)
-    trim = trim if isinstance(trim, int) else 4000
-    use_gpu = args[0] if args and args[0] in ('auto', False, True) else 'auto'
+    trim = trim if isinstance(trim, int) else 3000
+    use_gpu = use_gpu if use_gpu in ('auto', False, True) else 'auto'
     tokens = tokenize(ps)
     if not tokens:
         return (None, '')
@@ -289,11 +289,18 @@ with gr.Blocks() as basic_tts:
                 autoplay = gr.Checkbox(value=True, label='Autoplay')
                 autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
-                trim = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='✂️ Trim', info='Cut from both ends')
+                trim = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='✂️ Trim', info='Cut from both ends')
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
-    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
-    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
+    with gr.Row():
+        _reduce_noise = gr.Slider(value=0.5, visible=False, render=False)
+        _closing_cut = gr.Slider(value=2000, visible=False, render=False)
+        _ease_in = gr.Slider(value=3000, visible=False, render=False)
+        _ease_out = gr.Slider(value=1000, visible=False, render=False)
+        _pad_before = gr.Slider(value=5000, visible=False, render=False)
+        _pad_after = gr.Slider(value=5000, visible=False, render=False)
+    text.submit(generate, inputs=[text, voice, in_ps, speed, _reduce_noise, trim, _closing_cut, _ease_in, _ease_out, _pad_before, _pad_after, use_gpu], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, _reduce_noise, trim, _closing_cut, _ease_in, _ease_out, _pad_before, _pad_after, use_gpu], outputs=[audio, out_ps])
 
 @torch.no_grad()
 def lf_forward(token_lists, voice, speed, device='cpu'):
