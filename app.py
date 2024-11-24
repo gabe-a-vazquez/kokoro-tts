@@ -156,16 +156,6 @@ CHOICES = {
 }
 VOICES = {device: {k: torch.load(os.path.join(snapshot, 'voicepacks', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()} for device in models}
 
-np_log_99 = np.log(99)
-def s_curve(p):
-    if p <= 0:
-        return 0
-    elif p >= 1:
-        return 1
-    s = 1 / (1 + np.exp((1-p*2)*np_log_99))
-    s = (s-0.01) * 50/49
-    return s
-
 SAMPLE_RATE = 24000
 
 @torch.no_grad()
@@ -198,10 +188,10 @@ def forward_gpu(tokens, voice, speed):
     return forward(tokens, voice, speed, device='cuda')
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice, ps, speed, _reduce_noise, opening_cut, closing_cut, ease_in, ease_out, _pad_before, _pad_after, use_gpu):
-    return _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu)
+def generate(text, voice, ps, speed, _reduce_noise, trim, _closing_cut, _ease_in, _ease_out, _pad_before, _pad_after, use_gpu):
+    return _generate(text, voice, ps, speed, trim, use_gpu)
 
-def _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu):
+def _generate(text, voice, ps, speed, trim, use_gpu):
     if voice not in VOICES['cpu']:
         voice = 'af'
     ps = ps or phonemize(text, voice)
@@ -219,18 +209,11 @@ def _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_ou
     except gr.exceptions.Error as e:
         raise gr.Error(e)
         return (None, '')
-    opening_cut = int(opening_cut / speed)
-    if opening_cut > 0:
-        out = out[opening_cut:]
-    closing_cut = int(closing_cut / speed)
-    if closing_cut > 0:
-        out = out[:-closing_cut]
-    ease_in = min(int(ease_in / speed), len(out)//2)
-    for i in range(ease_in):
-        out[i] *= s_curve(i / ease_in)
-    ease_out = min(int(ease_out / speed), len(out)//2)
-    for i in range(ease_out):
-        out[-i-1] *= s_curve(i / ease_out)
+    trim = int(trim / speed)
+    if trim > 0:
+        if trim * 2 >= len(out):
+            return (None, '')
+        out = out[trim:-trim]
     return ((SAMPLE_RATE, out), ps)
 
 def toggle_autoplay(autoplay):
@@ -271,25 +254,15 @@ with gr.Blocks() as basic_tts:
             phonemize_btn.click(phonemize, inputs=[text, voice], outputs=[in_ps])
         with gr.Column():
             audio = gr.Audio(interactive=False, label='Output Audio', autoplay=True)
-            autoplay = gr.Checkbox(value=True, label='Autoplay')
-            autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
+            with gr.Accordion('Audio Settings', open=False):
+                autoplay = gr.Checkbox(value=True, label='Autoplay')
+                autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
+                speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
+                trim = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='✂️ Trim', info='Cut from both ends')
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
-    with gr.Accordion('Audio Settings', open=False):
-        with gr.Row():
-            speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speed of the audio; the settings below are auto-scaled by speed')
-        with gr.Row():
-            with gr.Column():
-                opening_cut = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='✂️ Opening Cut', info='Cut samples from the start')
-            with gr.Column():
-                closing_cut = gr.Slider(minimum=0, maximum=24000, value=2000, step=1000, label='🎬 Closing Cut', info='Cut samples from the end')
-        with gr.Row():
-            with gr.Column():
-                ease_in = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='🎢 Ease In', info='Ease in samples, after opening cut')
-            with gr.Column():
-                ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='🛝 Ease Out', info='Ease out samples, before closing cut')
-    text.submit(_generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu], outputs=[audio, out_ps])
-    generate_btn.click(_generate, inputs=[text, voice, in_ps, speed, opening_cut, closing_cut, ease_in, ease_out, use_gpu], outputs=[audio, out_ps])
+    text.submit(_generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
+    generate_btn.click(_generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
 
 @torch.no_grad()
 def lf_forward(token_lists, voice, speed, device='cpu'):
@@ -376,11 +349,10 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     segments = [row for t in texts for row in recursive_split(t, voice)]
     return [(i, *row) for i, row in enumerate(segments)]
 
-def lf_generate(segments, voice, speed, opening_cut, closing_cut, ease_in, ease_out, pad_between, use_gpu):
+def lf_generate(segments, voice, speed, trim, pad_between, use_gpu):
     token_lists = list(map(tokenize, segments['Tokens']))
     wavs = []
-    opening_cut = int(opening_cut / speed)
-    closing_cut = int(closing_cut / speed)
+    trim = int(trim / speed)
     pad_between = int(pad_between / speed)
     batch_size = 100
     for i in range(0, len(token_lists), batch_size):
@@ -396,16 +368,10 @@ def lf_generate(segments, voice, speed, opening_cut, closing_cut, ease_in, ease_
                 raise gr.Error(e)
             break
         for out in outs:
-            if opening_cut > 0:
-                out = out[opening_cut:]
-            if closing_cut > 0:
-                out = out[:-closing_cut]
-            ease_in = min(int(ease_in / speed), len(out)//2)
-            for i in range(ease_in):
-                out[i] *= s_curve(i / ease_in)
-            ease_out = min(int(ease_out / speed), len(out)//2)
-            for i in range(ease_out):
-                out[-i-1] *= s_curve(i / ease_out)
+            if trim > 0:
+                if trim * 2 >= len(out):
+                    continue
+                out = out[trim:-trim]
             if wavs and pad_between > 0:
                 wavs.append(np.zeros(pad_between))
             wavs.append(out)
@@ -451,26 +417,15 @@ with gr.Blocks() as lf_tts:
                 generate_btn = gr.Button('Generate x0', variant='secondary', interactive=False)
         with gr.Column():
             audio = gr.Audio(interactive=False, label='Output Audio')
-            with gr.Accordion('Audio Settings', open=False):
-                with gr.Row():
-                    speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speed of the audio; the settings below are auto-scaled by speed')
-                with gr.Row():
-                    with gr.Column():
-                        opening_cut = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='✂️ Opening Cut', info='Cut samples from the start')
-                    with gr.Column():
-                        closing_cut = gr.Slider(minimum=0, maximum=24000, value=2000, step=1000, label='🎬 Closing Cut', info='Cut samples from the end')
-                with gr.Row():
-                    with gr.Column():
-                        ease_in = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='🎢 Ease In', info='Ease in samples, after opening cut')
-                    with gr.Column():
-                        ease_out = gr.Slider(minimum=0, maximum=24000, value=1000, step=1000, label='🛝 Ease Out', info='Ease out samples, before closing cut')
-                with gr.Row():
-                    pad_between = gr.Slider(minimum=0, maximum=24000, value=10000, step=1000, label='🔇 Pad Between', info='How many samples of silence to insert between segments')
+            with gr.Accordion('Audio Settings', open=True):
+                speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
+                trim = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='✂️ Trim', info='Cut from both ends')
+                pad_between = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='🔇 Pad Between', info='How much silence to insert between segments')
     with gr.Row():
         segments = gr.Dataframe(headers=['#', 'Text', 'Tokens', 'Length'], row_count=(1, 'dynamic'), col_count=(4, 'fixed'), label='Segments', interactive=False, wrap=True)
         segments.change(fn=did_change_segments, inputs=[segments], outputs=[segment_btn, generate_btn])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_btn.click(lf_generate, inputs=[segments, voice, speed, opening_cut, closing_cut, ease_in, ease_out, pad_between, use_gpu], outputs=[audio])
+    generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu], outputs=[audio])
 
 with gr.Blocks() as about:
     gr.Markdown("""
