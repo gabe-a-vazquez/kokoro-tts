@@ -467,14 +467,14 @@ with gr.Blocks() as lf_tts:
 
 with gr.Blocks() as about:
     gr.Markdown("""
-Kokoro is a frontier TTS model for its size. It has 80 million parameters,<sup>[1]</sup> uses a lean StyleTTS 2 architecture,<sup>[2]</sup> and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
+Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L31) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
 
 ### FAQ
 #### Will this be open sourced?
-There currently isn't a release date scheduled for the weights. The inference code in this space is MIT licensed. The architecture was already published by Li et al, with MIT licensed code and pretrained weights.<sup>[2]</sup>
+There currently isn't a release date scheduled for the weights. The inference code in this space is MIT licensed. The architecture was already published by Li et al, with MIT licensed code and pretrained weights.
 
 #### What is the difference between stable and unstable voices?
-An unstable voice is more likely to stumble or produce unnatural artifacts, especially on short or strange texts.
+Unstable voices are more likely to stumble or produce unnatural artifacts, especially on short or strange texts. Stable voices are more likely to deliver natural speech on a wider range of inputs. The first two audio clips in this [blog post](https://hf.co/blog/hexgrad/kokoro-short-burst-upgrade) are examples of unstable and stable speech. Note that even unstable voices can sound fine on medium to long texts.
 
 #### How can CPU be faster than ZeroGPU?
 The CPU is a dedicated resource for this Space, while the ZeroGPU pool is shared and dynamically allocated across all of HF. The ZeroGPU queue/allocator system inevitably adds latency to each request.<br/>
@@ -507,26 +507,31 @@ print(out_ps)
 ```
 This Space and the underlying Kokoro model are both under development and subject to change. Reliability is not guaranteed. Hugging Face and Gradio might enforce their own rate limits.
 
-### Model Version History
-| Version | Date | Val mel / dur / f0 Losses |
-| ------- | ---- | ------------------------- |
-| v0.19 | 2024 Nov 22 | 0.261 / 0.627 / 1.897 |
-| v0.16 | 2024 Nov 15 | 0.263 / 0.646 / 1.934 |
-| v0.14 | 2024 Nov 12 | 0.262 / 0.642 / 1.889 |
-
 ### Licenses
 Inference code: MIT<br/>
-espeak-ng dependency: GPL-3.0<sup>[4]</sup><br/>
-Random English texts: Unknown<sup>[5]</sup><br/>
-Random Japanese texts: CC0 public domain<sup>[6]</sup>
+[eSpeak NG](https://github.com/espeak-ng/espeak-ng): GPL-3.0<br/>
+Random English texts: Unknown from [Quotable Data](https://github.com/quotable-io/data/blob/master/data/quotes.json)<br/>
+Random Japanese texts: CC0 public domain from [Common Voice](https://github.com/common-voice/common-voice/tree/main/server/data/ja)
+""")
 
-### References
-1. Kokoro parameter count | https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L31
-2. StyleTTS 2 | https://github.com/yl4579/StyleTTS2
-3. Vast.ai referral link | https://cloud.vast.ai/?ref_id=79907
-4. eSpeak NG | https://github.com/espeak-ng/espeak-ng
-5. Quotable Data | https://github.com/quotable-io/data/blob/master/data/quotes.json
-6. Common Voice Japanese sentences | https://github.com/common-voice/common-voice/tree/main/server/data/ja
+with gr.Blocks() as changelog:
+    gr.Markdown("""
+### 23 Nov 2024
+🔀 Hardware switching between CPU and GPU
+🗣️ Restored old voices, back up to 32 total
+
+### 22 Nov 2024
+🚀 Model v0.19
+🧪 Validation losses: 0.261 mel / 0.627 dur / 1.897 f0
+📝 https://hf.co/blog/hexgrad/kokoro-short-burst-upgrade
+
+### 15 Nov 2024
+🚀 Model v0.16
+🧪 Validation losses: 0.263 mel / 0.646 dur / 1.934 f0
+
+### 12 Nov 2024
+🚀 Model v0.14
+🧪 Validation losses: 0.262 mel / 0.642 dur / 1.889 f0
 """)
 
 with gr.Blocks() as app:
