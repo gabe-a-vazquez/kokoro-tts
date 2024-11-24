@@ -142,17 +142,31 @@ VOCAB = get_vocab()
 def tokenize(ps):
     return [i for i in map(VOCAB.get, ps) if i is not None]
 
-# ⭐ voices are stable, 🧪 voices are unstable
+# Starred voices are more stable
 CHOICES = {
 '🇺🇸 🚺 American Female ⭐': 'af',
-'🇺🇸 🚺 Bella': 'af_bella',
-'🇺🇸 🚺 Nicole': 'af_nicole',
-'🇺🇸 🚺 Sarah': 'af_sarah',
-'🇺🇸 🚺 Sky 🧪': 'af_sky',
-'🇺🇸 🚹 Adam 🧪': 'am_adam',
-'🇺🇸 🚹 Michael': 'am_michael',
-'🇬🇧 🚹 Lewis 🧪': 'bm_lewis',
-'🇯🇵 🚺 Japanese Female': 'jf_0',
+'🇺🇸 🚺 Alloy': 'af_alloy',
+'🇺🇸 🚺 Bella ⭐': 'af_bella',
+'🇺🇸 🚺 Jessica': 'af_jessica',
+'🇺🇸 🚺 Nicole ⭐': 'af_nicole',
+'🇺🇸 🚺 Nova': 'af_nova',
+'🇺🇸 🚺 River': 'af_river',
+'🇺🇸 🚺 Sarah ⭐': 'af_sarah',
+'🇺🇸 🚺 Shimmer': 'af_shimmer',
+'🇺🇸 🚺 Sky': 'af_sky',
+'🇺🇸 🚹 Adam': 'am_adam',
+'🇺🇸 🚹 Echo': 'am_echo',
+'🇺🇸 🚹 Eric': 'am_eric',
+'🇺🇸 🚹 Liam': 'am_liam',
+'🇺🇸 🚹 Michael ⭐': 'am_michael',
+'🇺🇸 🚹 Onyx': 'am_onyx',
+'🇬🇧 🚺 Alice': 'bf_alice',
+'🇬🇧 🚺 Lily': 'bf_lily',
+'🇬🇧 🚹 Daniel': 'bm_daniel',
+'🇬🇧 🚹 Fable': 'bm_fable',
+'🇬🇧 🚹 George': 'bm_george',
+'🇬🇧 🚹 Lewis': 'bm_lewis',
+'🇯🇵 🚺 Japanese Female ⭐': 'jf_0',
 }
 VOICES = {device: {k: torch.load(os.path.join(snapshot, 'voicepacks', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()} for device in models}
 
@@ -233,7 +247,7 @@ with gr.Blocks() as basic_tts:
         with gr.Column():
             text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text using Kokoro, a TTS model with 80 million parameters')
             with gr.Row():
-                voice = gr.Dropdown(list(CHOICES.items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 voices are unstable')
+                voice = gr.Dropdown(list(CHOICES.items()), value='af', label='Voice', info='Starred voices are more stable')
                 use_gpu = gr.Dropdown(
                     USE_GPU_CHOICES,
                     value='auto' if CUDA_AVAILABLE else False,
@@ -401,7 +415,7 @@ with gr.Blocks() as lf_tts:
             text = gr.Textbox(label='Input Text', info='Generate speech in batches of 100 text segments and automatically join them together')
             file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
             with gr.Row():
-                voice = gr.Dropdown(list(CHOICES.items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 voices are unstable')
+                voice = gr.Dropdown(list(CHOICES.items()), value='af', label='Voice', info='Starred voices are more stable')
                 use_gpu = gr.Dropdown(
                     [('ZeroGPU 🚀', True), ('CPU 🐌', False)],
                     value=CUDA_AVAILABLE,
@@ -435,7 +449,7 @@ Kokoro is a frontier TTS model for its size. It has 80 million parameters,<sup>[
 #### Will this be open sourced?
 There currently isn't a release date scheduled for the weights. The inference code in this space is MIT licensed. The architecture was already published by Li et al, with MIT licensed code and pretrained weights.<sup>[2]</sup>
 
-#### What is an unstable voice?
+#### What is the difference between stable and unstable voices?
 An unstable voice is more likely to stumble or produce unnatural artifacts, especially on short or strange texts.
 
 #### How can CPU be faster than ZeroGPU?
