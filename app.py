@@ -250,7 +250,7 @@ def generate(text, voice='af', ps=None, speed=1, _reduce_noise=0.5, trim=3000, _
 def toggle_autoplay(autoplay):
     return gr.Audio(interactive=False, label='Output Audio', autoplay=autoplay)
 
-USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 💬', False), ('ZeroGPU 📝', True)]
+USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 💬', False), ('ZeroGPU 📄', True)]
 USE_GPU_INFOS = {
     'auto': 'Use CPU or GPU, whichever is faster',
     False: 'CPU is ~faster <100 tokens',
@@ -523,7 +523,7 @@ with gr.Blocks() as changelog:
 ### 22 Nov 2024
 🚀 Model v0.19
 🧪 Validation losses: 0.261 mel / 0.627 dur / 1.897 f0
-📝 https://hf.co/blog/hexgrad/kokoro-short-burst-upgrade
+📄 https://hf.co/blog/hexgrad/kokoro-short-burst-upgrade
 
 ### 15 Nov 2024
 🚀 Model v0.16
@@ -536,8 +536,8 @@ with gr.Blocks() as changelog:
 
 with gr.Blocks() as app:
     gr.TabbedInterface(
-        [basic_tts, lf_tts, about],
-        ['🔥 Basic TTS', '📖 Long-Form', 'ℹ️ About'],
+        [basic_tts, lf_tts, about, changelog],
+        ['🔥 Basic TTS', '📖 Long-Form', 'ℹ️ About', '📝 Changelog'],
     )
 
 if __name__ == '__main__':
