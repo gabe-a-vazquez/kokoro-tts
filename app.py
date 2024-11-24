@@ -236,7 +236,7 @@ def _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_ou
 def toggle_autoplay(autoplay):
     return gr.Audio(interactive=False, label='Output Audio', autoplay=autoplay)
 
-USE_GPU_CHOICES = [('Auto', 'auto'), ('CPU', False), ('ZeroGPU', True)]
+USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 🚲', False), ('ZeroGPU 🏎️', True)]
 USE_GPU_INFOS = {
     'auto': 'Use CPU or GPU, whichever is faster',
     False: 'CPU is ~faster <100 tokens',
@@ -437,7 +437,7 @@ with gr.Blocks() as lf_tts:
             with gr.Row():
                 voice = gr.Dropdown(list(CHOICES.items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 voices are unstable')
                 use_gpu = gr.Dropdown(
-                    [('ZeroGPU', True), ('CPU', False)],
+                    [('ZeroGPU 🚀', True), ('CPU 🐌', False)],
                     value=CUDA_AVAILABLE,
                     label='Hardware',
                     info='GPU is >10x faster but has a usage quota',
@@ -474,7 +474,7 @@ with gr.Blocks() as lf_tts:
 
 with gr.Blocks() as about:
     gr.Markdown("""
-Kokoro is a frontier TTS model for its size. It has 80 million parameters,<sup>[1]</sup> uses a lean StyleTTS 2 architecture,<sup>[2]</sup> and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact @rzvzn on Discord.
+Kokoro is a frontier TTS model for its size. It has 80 million parameters,<sup>[1]</sup> uses a lean StyleTTS 2 architecture,<sup>[2]</sup> and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
 
 ### FAQ
 #### Will this be open sourced?
