@@ -293,12 +293,12 @@ with gr.Blocks() as basic_tts:
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
     with gr.Row():
-        _reduce_noise = gr.Slider(value=0.5, visible=False, render=False)
-        _closing_cut = gr.Slider(value=2000, visible=False, render=False)
-        _ease_in = gr.Slider(value=3000, visible=False, render=False)
-        _ease_out = gr.Slider(value=1000, visible=False, render=False)
-        _pad_before = gr.Slider(value=5000, visible=False, render=False)
-        _pad_after = gr.Slider(value=5000, visible=False, render=False)
+        _reduce_noise = gr.Slider(value=0.5, interactive=False, visible=False)
+        _closing_cut = gr.Slider(value=2000, interactive=False, visible=False)
+        _ease_in = gr.Slider(value=3000, interactive=False, visible=False)
+        _ease_out = gr.Slider(value=1000, interactive=False, visible=False)
+        _pad_before = gr.Slider(value=5000, interactive=False, visible=False)
+        _pad_after = gr.Slider(value=5000, interactive=False, visible=False)
     text.submit(generate, inputs=[text, voice, in_ps, speed, _reduce_noise, trim, _closing_cut, _ease_in, _ease_out, _pad_before, _pad_after, use_gpu], outputs=[audio, out_ps])
     generate_btn.click(generate, inputs=[text, voice, in_ps, speed, _reduce_noise, trim, _closing_cut, _ease_in, _ease_out, _pad_before, _pad_after, use_gpu], outputs=[audio, out_ps])
 
