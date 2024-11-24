@@ -211,18 +211,20 @@ def forward_gpu(tokens, voice, speed):
     return forward(tokens, voice, speed, device='cuda')
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice, ps=None, speed=1, trim=4000, use_gpu='auto', *args):
+def generate(text, voice, ps=None, speed=1, trim=4000, *args):
     if voice not in VOICES['cpu']:
         voice = 'af'
     ps = ps or phonemize(text, voice)
-    if not isinstance(speed, int) and not isinstance(speed, float):
+    if not isinstance(speed, float) and not isinstance(speed, int):
         speed = 1
     elif speed < 0.5 or speed > 2:
         speed = min(max(0.5, speed), 2)
     if not isinstance(trim, int):
         trim = 4000
-    if use_gpu not in ('auto', False, True):
+    if not args or args[0] not in ('auto', False, True):
         use_gpu = 'auto'
+    else:
+        use_gpu = args[0]
     tokens = tokenize(ps)
     if not tokens:
         return (None, '')
