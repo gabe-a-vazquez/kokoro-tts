@@ -517,20 +517,20 @@ Random Japanese texts: CC0 public domain from [Common Voice](https://github.com/
 with gr.Blocks() as changelog:
     gr.Markdown("""
 ### 23 Nov 2024
-🔀 Hardware switching between CPU and GPU
+🔀 Hardware switching between CPU and GPU<br/>
 🗣️ Restored old voices, back up to 32 total
 
 ### 22 Nov 2024
-🚀 Model v0.19
-🧪 Validation losses: 0.261 mel / 0.627 dur / 1.897 f0
+🚀 Model v0.19<br/>
+🧪 Validation losses: 0.261 mel / 0.627 dur / 1.897 f0<br/>
 📄 https://hf.co/blog/hexgrad/kokoro-short-burst-upgrade
 
 ### 15 Nov 2024
-🚀 Model v0.16
+🚀 Model v0.16<br/>
 🧪 Validation losses: 0.263 mel / 0.646 dur / 1.934 f0
 
 ### 12 Nov 2024
-🚀 Model v0.14
+🚀 Model v0.14<br/>
 🧪 Validation losses: 0.262 mel / 0.642 dur / 1.889 f0
 """)
 
