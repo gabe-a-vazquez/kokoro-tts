@@ -236,7 +236,7 @@ def _generate(text, voice, ps, speed, opening_cut, closing_cut, ease_in, ease_ou
 def toggle_autoplay(autoplay):
     return gr.Audio(interactive=False, label='Output Audio', autoplay=autoplay)
 
-USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 🚲', False), ('ZeroGPU 🏎️', True)]
+USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 💬', False), ('ZeroGPU 📝', True)]
 USE_GPU_INFOS = {
     'auto': 'Use CPU or GPU, whichever is faster',
     False: 'CPU is ~faster <100 tokens',
@@ -496,26 +496,23 @@ The average hourly cost for the 1x A100-class 80GB VRAM instances used for train
 ### Gradio API
 This Space can be used via API. The following code block can be copied and run in one Google Colab cell.
 ```
-# 1. Install the Gradio Python client
+# 1️⃣ Install the Gradio Python client
 !pip install -q gradio_client
-
-# 2. Initialize the client
+# 2️⃣ Initialize the client
 from gradio_client import Client
 client = Client('hexgrad/Kokoro-TTS')
-
-# 3. Call the generate endpoint, which returns a pair: an audio path and a string of output phonemes
+# 3️⃣ Call the generate endpoint, which returns a pair: an audio path and a string of output phonemes
 audio_path, out_ps = client.predict(
     text="How could I know? It's an unanswerable question. Like asking an unborn child if they'll lead a good life. They haven't even been born.",
     voice='af',
     api_name='/generate'
 )
-
-# 4. Display the audio and print the output phonemes
+# 4️⃣ Display the audio and print the output phonemes
 from IPython.display import display, Audio
 display(Audio(audio_path, autoplay=True))
 print(out_ps)
 ```
-Note that this Space and the underlying Kokoro model are both under development and subject to change. Reliability is not guaranteed. Hugging Face and/or Gradio might enforce their own rate limits.
+This Space and the underlying Kokoro model are both under development and subject to change. Reliability is not guaranteed. Hugging Face and Gradio might enforce their own rate limits.
 
 ### Model Version History
 | Version | Date | Val mel / dur / f0 Losses |
