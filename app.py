@@ -211,10 +211,10 @@ def forward_gpu(tokens, voice, speed):
     return forward(tokens, voice, speed, device='cuda')
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice, ps, speed, _reduce_noise, trim, _closing_cut, _ease_in, _ease_out, _pad_before, _pad_after):
-    return _generate(text, voice, ps, speed, trim, 'auto')
-
-def _generate(text, voice, ps, speed, trim, use_gpu):
+def generate(*args):
+    text, voice, ps, speed = args[:4]
+    trim = args[4] if len(args) > 4 and isinstance(args[4], int) else 4000
+    use_gpu = args[5] if len(args) > 5 and args[5] in ('auto', False, True) else 'auto'
     if voice not in VOICES['cpu']:
         voice = 'af'
     ps = ps or phonemize(text, voice)
@@ -284,8 +284,8 @@ with gr.Blocks() as basic_tts:
                 trim = gr.Slider(minimum=0, maximum=24000, value=4000, step=1000, label='✂️ Trim', info='Cut from both ends')
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
-    text.submit(_generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
-    generate_btn.click(_generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
+    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
 
 @torch.no_grad()
 def lf_forward(token_lists, voice, speed, device='cpu'):
