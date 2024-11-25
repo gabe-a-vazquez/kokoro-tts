@@ -100,8 +100,45 @@ phonemizers = dict(
     j=Katsu(),
 )
 
+# Starred voices are more stable
+CHOICES = {
+'🇺🇸 🚺 American Female ⭐': 'af',
+'🇺🇸 🚺 Bella ⭐': 'af_bella',
+'🇺🇸 🚺 Nicole ⭐': 'af_nicole',
+'🇺🇸 🚺 Sarah ⭐': 'af_sarah',
+'🇺🇸 🚺 American Female 1': 'af_1',
+'🇺🇸 🚺 Alloy': 'af_alloy',
+'🇺🇸 🚺 Jessica': 'af_jessica',
+'🇺🇸 🚺 Nova': 'af_nova',
+'🇺🇸 🚺 River': 'af_river',
+'🇺🇸 🚺 Sky': 'af_sky',
+'🇺🇸 🚹 Michael ⭐': 'am_michael',
+'🇺🇸 🚹 Adam': 'am_adam',
+'🇺🇸 🚹 Echo': 'am_echo',
+'🇺🇸 🚹 Eric': 'am_eric',
+'🇺🇸 🚹 Liam': 'am_liam',
+'🇺🇸 🚹 Onyx': 'am_onyx',
+'🇬🇧 🚺 British Female 0': 'bf_0',
+'🇬🇧 🚺 British Female 1': 'bf_1',
+'🇬🇧 🚺 British Female 2': 'bf_2',
+'🇬🇧 🚺 British Female 3': 'bf_3',
+'🇬🇧 🚺 Alice': 'bf_alice',
+'🇬🇧 🚺 Lily': 'bf_lily',
+'🇬🇧 🚹 British Male 0': 'bm_0',
+'🇬🇧 🚹 British Male 1': 'bm_1',
+'🇬🇧 🚹 Daniel': 'bm_daniel',
+'🇬🇧 🚹 Fable': 'bm_fable',
+'🇬🇧 🚹 George': 'bm_george',
+'🇬🇧 🚹 Lewis': 'bm_lewis',
+'🇯🇵 🚺 Japanese Female ⭐': 'jf_0',
+'🇯🇵 🚺 Japanese Female 1': 'jf_1',
+'🇯🇵 🚺 Japanese Female 2': 'jf_2',
+'🇯🇵 🚺 Japanese Female 3': 'jf_3',
+}
+VOICES = {device: {k: torch.load(os.path.join(snapshot, 'voicepacks', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()} for device in models}
+
 def resolve_voices(voice, warn=True):
-    if not isinstance(voice, str):
+    if not isinstance(voice, str) or voice == list(CHOICES.keys())[0]:
         return ['af']
     voices = voice.lower().replace('/', '_').replace(' ', '+').replace(',', '+').split('+')
     if warn:
@@ -152,43 +189,6 @@ VOCAB = get_vocab()
 
 def tokenize(ps):
     return [i for i in map(VOCAB.get, ps) if i is not None]
-
-# Starred voices are more stable
-CHOICES = {
-'🇺🇸 🚺 American Female ⭐': 'af',
-'🇺🇸 🚺 Bella ⭐': 'af_bella',
-'🇺🇸 🚺 Nicole ⭐': 'af_nicole',
-'🇺🇸 🚺 Sarah ⭐': 'af_sarah',
-'🇺🇸 🚺 American Female 1': 'af_1',
-'🇺🇸 🚺 Alloy': 'af_alloy',
-'🇺🇸 🚺 Jessica': 'af_jessica',
-'🇺🇸 🚺 Nova': 'af_nova',
-'🇺🇸 🚺 River': 'af_river',
-'🇺🇸 🚺 Sky': 'af_sky',
-'🇺🇸 🚹 Michael ⭐': 'am_michael',
-'🇺🇸 🚹 Adam': 'am_adam',
-'🇺🇸 🚹 Echo': 'am_echo',
-'🇺🇸 🚹 Eric': 'am_eric',
-'🇺🇸 🚹 Liam': 'am_liam',
-'🇺🇸 🚹 Onyx': 'am_onyx',
-'🇬🇧 🚺 British Female 0': 'bf_0',
-'🇬🇧 🚺 British Female 1': 'bf_1',
-'🇬🇧 🚺 British Female 2': 'bf_2',
-'🇬🇧 🚺 British Female 3': 'bf_3',
-'🇬🇧 🚺 Alice': 'bf_alice',
-'🇬🇧 🚺 Lily': 'bf_lily',
-'🇬🇧 🚹 British Male 0': 'bm_0',
-'🇬🇧 🚹 British Male 1': 'bm_1',
-'🇬🇧 🚹 Daniel': 'bm_daniel',
-'🇬🇧 🚹 Fable': 'bm_fable',
-'🇬🇧 🚹 George': 'bm_george',
-'🇬🇧 🚹 Lewis': 'bm_lewis',
-'🇯🇵 🚺 Japanese Female ⭐': 'jf_0',
-'🇯🇵 🚺 Japanese Female 1': 'jf_1',
-'🇯🇵 🚺 Japanese Female 2': 'jf_2',
-'🇯🇵 🚺 Japanese Female 3': 'jf_3',
-}
-VOICES = {device: {k: torch.load(os.path.join(snapshot, 'voicepacks', f'{k}.pt'), weights_only=True).to(device) for k in CHOICES.values()} for device in models}
 
 SAMPLE_RATE = 24000
 
@@ -276,9 +276,6 @@ USE_GPU_INFOS = {
 def change_use_gpu(value):
     return gr.Dropdown(USE_GPU_CHOICES, value=value, label='Hardware', info=USE_GPU_INFOS[value], interactive=CUDA_AVAILABLE)
 
-def update_voice(voice, btn):
-    return f'{voice}+{btn}' if voice.startswith(btn[:2]) else btn
-
 with gr.Blocks() as basic_tts:
     with gr.Row():
         with gr.Column():
@@ -319,7 +316,7 @@ with gr.Blocks() as basic_tts:
                 for j in range(4):
                     with gr.Column():
                         btn = gr.Button(list(CHOICES.values())[i*4+j], variant='primary' if i*4+j < 10 else 'secondary')
-                        btn.click(update_voice, inputs=[voice, btn], outputs=[voice])
+                        btn.click(lambda v, b: f'{v}+{b}' if v.startswith(b[:2]) else b, inputs=[voice, btn], outputs=[voice])
                         voice.change(lambda v, b: gr.Button(b, variant='primary' if v.startswith(b[:2]) else 'secondary'), inputs=[voice, btn], outputs=[btn])
     text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
     generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
