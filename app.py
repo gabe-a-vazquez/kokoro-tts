@@ -220,7 +220,7 @@ def clamp_speed(speed):
     return speed
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice='af', ps=None, speed=1, _reduce_noise=0.5, trim=3000, _closing_cut=2000, _ease_in=3000, _ease_out=1000, _pad_before=5000, _pad_after=5000, use_gpu='auto'):
+def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
     voice = voice if voice in VOICES['cpu'] else 'af'
     ps = ps or phonemize(text, voice)
     speed = clamp_speed(speed)
@@ -232,14 +232,20 @@ def generate(text, voice='af', ps=None, speed=1, _reduce_noise=0.5, trim=3000, _
     elif len(tokens) > 510:
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
+    use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
     try:
-        if not use_gpu or (use_gpu == 'auto' and len(ps) < 100):
+        if use_gpu:
+            out = forward_gpu(tokens, voice, speed)
+        else:
+            out = forward(tokens, voice, speed)
+    except gr.exceptions.Error as e:
+        if use_gpu:
+            gr.Warning(str(e))
+            gr.Info('GPU failover to CPU')
             out = forward(tokens, voice, speed)
         else:
-            out = forward_gpu(tokens, voice, speed)
-    except gr.exceptions.Error as e:
-        raise gr.Error(e)
-        return (None, '')
+            raise gr.Error(e)
+            return (None, '')
     trim = int(trim / speed)
     if trim > 0:
         if trim * 2 >= len(out):
@@ -292,15 +298,8 @@ with gr.Blocks() as basic_tts:
                 trim = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='✂️ Trim', info='Cut from both ends')
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
-    with gr.Row():
-        _reduce_noise = gr.Slider(value=0.5, interactive=False, visible=False)
-        _closing_cut = gr.Slider(value=2000, interactive=False, visible=False)
-        _ease_in = gr.Slider(value=3000, interactive=False, visible=False)
-        _ease_out = gr.Slider(value=1000, interactive=False, visible=False)
-        _pad_before = gr.Slider(value=5000, interactive=False, visible=False)
-        _pad_after = gr.Slider(value=5000, interactive=False, visible=False)
-    text.submit(generate, inputs=[text, voice, in_ps, speed, _reduce_noise, trim, _closing_cut, _ease_in, _ease_out, _pad_before, _pad_after, use_gpu], outputs=[audio, out_ps])
-    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, _reduce_noise, trim, _closing_cut, _ease_in, _ease_out, _pad_before, _pad_after, use_gpu], outputs=[audio, out_ps])
+    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
 
 @torch.no_grad()
 def lf_forward(token_lists, voice, speed, device='cpu'):
@@ -470,19 +469,19 @@ with gr.Blocks() as about:
 Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L31) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
 
 ### FAQ
-#### Will this be open sourced?
+**Will this be open sourced?**
 There currently isn't a release date scheduled for the weights. The inference code in this space is MIT licensed. The architecture was already published by Li et al, with MIT licensed code and pretrained weights.
 
-#### What is the difference between stable and unstable voices?
+**What is the difference between stable and unstable voices?**
 Unstable voices are more likely to stumble or produce unnatural artifacts, especially on short or strange texts. Stable voices are more likely to deliver natural speech on a wider range of inputs. The first two audio clips in this [blog post](https://hf.co/blog/hexgrad/kokoro-short-burst-upgrade) are examples of unstable and stable speech. Note that even unstable voices can sound fine on medium to long texts.
 
-#### How can CPU be faster than ZeroGPU?
+**How can CPU be faster than ZeroGPU?**
 The CPU is a dedicated resource for this Space, while the ZeroGPU pool is shared and dynamically allocated across all of HF. The ZeroGPU queue/allocator system inevitably adds latency to each request.<br/>
 For Basic TTS under ~100 tokens or characters, only a few seconds of audio need to be generated, so the actual compute is not that heavy. In these short bursts, the dedicated CPU can often compute the result faster than the total time it takes to: enter the ZeroGPU queue, wait to get allocated, and have a GPU compute and deliver the result.<br/>
 ZeroGPU catches up beyond 100 tokens and especially closer to the ~500 token context window. Long-Form mode processes batches of 100 segments at a time, so the GPU should outspeed the CPU by 1-2 orders of magnitude.
 
 ### Compute
-The model was trained on 1x A100-class 80GB instances rented from [Vast.ai](https://cloud.vast.ai/?ref_id=79907).<sup>[3]</sup><br/>
+The model was trained on 1x A100-class 80GB instances rented from [Vast.ai](https://cloud.vast.ai/?ref_id=79907).<br/>
 Vast was chosen over other compute providers due to its competitive on-demand hourly rates.<br/>
 The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
 
@@ -522,16 +521,16 @@ with gr.Blocks() as changelog:
 
 ### 22 Nov 2024
 🚀 Model v0.19<br/>
-🧪 Validation losses: 0.261 mel / 0.627 dur / 1.897 f0<br/>
+🧪 Validation losses: 0.261 mel, 0.627 dur, 1.897 f0<br/>
 📄 https://hf.co/blog/hexgrad/kokoro-short-burst-upgrade
 
 ### 15 Nov 2024
 🚀 Model v0.16<br/>
-🧪 Validation losses: 0.263 mel / 0.646 dur / 1.934 f0
+🧪 Validation losses: 0.263 mel, 0.646 dur, 1.934 f0
 
 ### 12 Nov 2024
 🚀 Model v0.14<br/>
-🧪 Validation losses: 0.262 mel / 0.642 dur / 1.889 f0
+🧪 Validation losses: 0.262 mel, 0.642 dur, 1.889 f0
 """)
 
 with gr.Blocks() as app:
