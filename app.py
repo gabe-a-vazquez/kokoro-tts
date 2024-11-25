@@ -100,8 +100,19 @@ phonemizers = dict(
     j=Katsu(),
 )
 
+def resolve_voices(voice, warn=True):
+    if not isinstance(voice, str):
+        return ['af']
+    voices = voice.lower().replace('/', '_').replace(' ', '+').replace(',', '+').split('+')
+    if warn:
+        unks = {v for v in voices if v and v not in VOICES['cpu']}
+        if unks:
+            gr.Warning(f"Unknown voice{'s' if len(unks) > 1 else ''}: {','.join(unks)}")
+    voices = [v for v in voices if v in VOICES['cpu']]
+    return voices if voices else ['af']
+
 def phonemize(text, voice, norm=True):
-    lang = voice[0]
+    lang = resolve_voices(voice)[0][0]
     if norm:
         text = normalize(text)
     ps = phonemizers[lang].phonemize([text])
@@ -182,8 +193,8 @@ VOICES = {device: {k: torch.load(os.path.join(snapshot, 'voicepacks', f'{k}.pt')
 SAMPLE_RATE = 24000
 
 @torch.no_grad()
-def forward(tokens, voice, speed, device='cpu'):
-    ref_s = VOICES[device][voice][len(tokens)]
+def forward(tokens, voices, speed, device='cpu'):
+    ref_s = torch.mean(torch.stack([VOICES[device][v][len(tokens)] for v in voices]), dim=0)
     tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
     input_lengths = torch.LongTensor([tokens.shape[-1]]).to(device)
     text_mask = length_to_mask(input_lengths).to(device)
@@ -207,8 +218,8 @@ def forward(tokens, voice, speed, device='cpu'):
     return models[device].decoder(asr, F0_pred, N_pred, ref_s[:, :128]).squeeze().cpu().numpy()
 
 @spaces.GPU(duration=10)
-def forward_gpu(tokens, voice, speed):
-    return forward(tokens, voice, speed, device='cuda')
+def forward_gpu(tokens, voices, speed):
+    return forward(tokens, voices, speed, device='cuda')
 
 def clamp_speed(speed):
     if not isinstance(speed, float) and not isinstance(speed, int):
@@ -221,7 +232,7 @@ def clamp_speed(speed):
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
-    voice = voice if voice in VOICES['cpu'] else 'af'
+    voices = resolve_voices(voice, warn=ps)
     ps = ps or phonemize(text, voice)
     speed = clamp_speed(speed)
     trim = trim if isinstance(trim, int) else 3000
@@ -235,14 +246,14 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
     try:
         if use_gpu:
-            out = forward_gpu(tokens, voice, speed)
+            out = forward_gpu(tokens, voices, speed)
         else:
-            out = forward(tokens, voice, speed)
+            out = forward(tokens, voices, speed)
     except gr.exceptions.Error as e:
         if use_gpu:
             gr.Warning(str(e))
             gr.Info('GPU failover to CPU')
-            out = forward(tokens, voice, speed)
+            out = forward(tokens, voices, speed)
         else:
             raise gr.Error(e)
             return (None, '')
@@ -265,12 +276,15 @@ USE_GPU_INFOS = {
 def change_use_gpu(value):
     return gr.Dropdown(USE_GPU_CHOICES, value=value, label='Hardware', info=USE_GPU_INFOS[value], interactive=CUDA_AVAILABLE)
 
+def update_voice(voice, btn):
+    return f'{voice}+{btn}' if voice.startswith(btn[:2]) else btn
+
 with gr.Blocks() as basic_tts:
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text using Kokoro, a TTS model with 80 million parameters')
             with gr.Row():
-                voice = gr.Dropdown(list(CHOICES.items()), value='af', label='Voice', info='Starred voices are more stable')
+                voice = gr.Dropdown(list(CHOICES.items()), value='af', allow_custom_value=True, label='Voice', info='Starred voices are more stable')
                 use_gpu = gr.Dropdown(
                     USE_GPU_CHOICES,
                     value='auto' if CUDA_AVAILABLE else False,
@@ -298,12 +312,21 @@ with gr.Blocks() as basic_tts:
                 trim = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='✂️ Trim', info='Cut from both ends')
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
+    with gr.Accordion('Voice Mixer', open=False):
+        gr.Markdown('Create a custom voice by mixing and matching other voices. Click an orange button to add one part to your mix, or click a gray button to start over. Free text input also allowed.')
+        for i in range(8):
+            with gr.Row():
+                for j in range(4):
+                    with gr.Column():
+                        btn = gr.Button(list(CHOICES.values())[i*4+j], variant='primary' if i*4+j < 10 else 'secondary')
+                        btn.click(update_voice, inputs=[voice, btn], outputs=[voice])
+                        voice.change(lambda v, b: gr.Button(b, variant='primary' if v.startswith(b[:2]) else 'secondary'), inputs=[voice, btn], outputs=[btn])
     text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
     generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
 
 @torch.no_grad()
-def lf_forward(token_lists, voice, speed, device='cpu'):
-    voicepack = VOICES[device][voice]
+def lf_forward(token_lists, voices, speed, device='cpu'):
+    voicepack = torch.mean(torch.stack([VOICES[device][v] for v in voices]), dim=0)
     outs = []
     for tokens in token_lists:
         ref_s = voicepack[len(tokens)]
@@ -331,8 +354,8 @@ def lf_forward(token_lists, voice, speed, device='cpu'):
     return outs
 
 @spaces.GPU
-def lf_forward_gpu(token_lists, voice, speed):
-    return lf_forward(token_lists, voice, speed, device='cuda')
+def lf_forward_gpu(token_lists, voices, speed):
+    return lf_forward(token_lists, voices, speed, device='cuda')
 
 def resplit_strings(arr):
     # Handle edge cases
@@ -388,6 +411,8 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
 
 def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
     token_lists = list(map(tokenize, segments['Tokens']))
+    voices = resolve_voices(voice)
+    speed = clamp_speed(speed)
     wavs = []
     trim = int(trim / speed)
     pad_between = int(pad_between / speed)
@@ -438,7 +463,7 @@ with gr.Blocks() as lf_tts:
             text = gr.Textbox(label='Input Text', info='Generate speech in batches of 100 text segments and automatically join them together')
             file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
             with gr.Row():
-                voice = gr.Dropdown(list(CHOICES.items()), value='af', label='Voice', info='Starred voices are more stable')
+                voice = gr.Dropdown(list(CHOICES.items()), value='af', allow_custom_value=True, label='Voice', info='Starred voices are more stable')
                 use_gpu = gr.Dropdown(
                     [('ZeroGPU 🚀', True), ('CPU 🐌', False)],
                     value=CUDA_AVAILABLE,
@@ -515,20 +540,26 @@ Random Japanese texts: CC0 public domain from [Common Voice](https://github.com/
 
 with gr.Blocks() as changelog:
     gr.Markdown("""
-### 23 Nov 2024
+**25 Nov 2024**<br/>
+🎨 Voice Mixer added
+
+**24 Nov 2024**<br/>
+🛑 Model training halted, v0.19 is the current stable version
+
+**23 Nov 2024**<br/>
 🔀 Hardware switching between CPU and GPU<br/>
 🗣️ Restored old voices, back up to 32 total
 
-### 22 Nov 2024
+**22 Nov 2024**<br/>
 🚀 Model v0.19<br/>
 🧪 Validation losses: 0.261 mel, 0.627 dur, 1.897 f0<br/>
 📄 https://hf.co/blog/hexgrad/kokoro-short-burst-upgrade
 
-### 15 Nov 2024
+**15 Nov 2024**<br/>
 🚀 Model v0.16<br/>
 🧪 Validation losses: 0.263 mel, 0.646 dur, 1.934 f0
 
-### 12 Nov 2024
+**12 Nov 2024**<br/>
 🚀 Model v0.14<br/>
 🧪 Validation losses: 0.262 mel, 0.642 dur, 1.889 f0
 """)
