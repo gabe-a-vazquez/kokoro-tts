@@ -89,7 +89,8 @@ def normalize(text):
     text = re.sub(r'(?<=\d),(?=\d)', '', text)
     text = re.sub(r'(?<=\d)-(?=\d)', ' to ', text) # TODO: could be minus
     text = re.sub(r'(?<=\d)S', ' S', text)
-    text = re.sub(r"(?<=[A-Z])'?s", lambda m: "'s" if m.group()[0] == 'X' else "'S", text)
+    text = re.sub(r"(?<=[A-Z])'?s\b", "'S", text)
+    text = re.sub(r"(?<=X')S\b", 's', text)
     text = re.sub(r'(?:[A-Za-z]\.){2,} [a-z]', lambda m: m.group().replace('.', '-'), text)
     text = re.sub(r'(?i)(?<=[A-Z])\.(?=[A-Z])', '-', text)
     return parens_to_angles(text).strip()
