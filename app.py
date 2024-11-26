@@ -140,7 +140,7 @@ VOICES = {device: {k: torch.load(os.path.join(snapshot, 'voicepacks', f'{k}.pt')
 def resolve_voices(voice, warn=True):
     if not isinstance(voice, str) or voice == list(CHOICES.keys())[0]:
         return ['af']
-    voices = voice.lower().replace('/', '_').replace(' ', '+').replace(',', '+').split('+')
+    voices = voice.lower().replace(' ', '+').replace(',', '+').split('+')
     if warn:
         unks = {v for v in voices if v and v not in VOICES['cpu']}
         if unks:
@@ -310,7 +310,7 @@ with gr.Blocks() as basic_tts:
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
     with gr.Accordion('Voice Mixer', open=False):
-        gr.Markdown('Create a custom voice by mixing and matching other voices. Click an orange button to add one part to your mix, or click a gray button to start over. Free text input also allowed.')
+        gr.Markdown('Create a custom voice by mixing and matching other voices. Click an orange button to add one part to your mix, or click a gray button to start over. You can also enter a voice mix as text.')
         for i in range(8):
             with gr.Row():
                 for j in range(4):
