@@ -417,9 +417,9 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
     for i in range(0, len(token_lists), batch_size):
         try:
             if use_gpu:
-                outs = lf_forward_gpu(token_lists[i:i+batch_size], voice, speed)
+                outs = lf_forward_gpu(token_lists[i:i+batch_size], voices, speed)
             else:
-                outs = lf_forward(token_lists[i:i+batch_size], voice, speed)
+                outs = lf_forward(token_lists[i:i+batch_size], voices, speed)
         except gr.exceptions.Error as e:
             if wavs:
                 gr.Warning(str(e))
