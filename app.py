@@ -10,6 +10,7 @@ import pypdf
 import random
 import re
 import spaces
+import subprocess
 import torch
 import yaml
 
@@ -42,6 +43,13 @@ def get_random_text(voice):
     else:
         lang = 'en'
     return random.choice(random_texts[lang])
+
+sents = set()
+for txt in {'harvard_sentences', 'llama3_command-r_sentences_1st_person', 'llama3_command-r_sentences_excla', 'llama3_command-r_questions'}:
+    txt += '.txt'
+    subprocess.run(['wget', f'https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena/resolve/main/{txt}'])
+    with open('harvard_sentences.txt') as f:
+        sents.update(f.read().strip().splitlines())
 
 def parens_to_angles(s):
     return s.replace('(', '«').replace(')', '»')
@@ -232,8 +240,9 @@ def clamp_speed(speed):
         return 2
     return speed
 
+sk = gr.State()
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=None):
+def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
     voices = resolve_voices(voice, warn=ps)
     ps = ps or phonemize(text, voice)
     speed = clamp_speed(speed)
@@ -246,6 +255,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=N
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
+    global sk
     print('🔥', datetime.now(), text, voices, ps, use_gpu, sk)
     try:
         if use_gpu:
@@ -321,10 +331,8 @@ with gr.Blocks() as basic_tts:
                         btn = gr.Button(list(CHOICES.values())[i*4+j], variant='primary' if i*4+j < 10 else 'secondary')
                         btn.click(lambda v, b: f'{v}+{b}' if v.startswith(b[:2]) else b, inputs=[voice, btn], outputs=[voice])
                         voice.change(lambda v, b: gr.Button(b, variant='primary' if v.startswith(b[:2]) else 'secondary'), inputs=[voice, btn], outputs=[btn])
-    sk = gr.State()
     text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
     generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
-    basic_tts.load(lambda r: r.session_hash, None, sk)
 
 @torch.no_grad()
 def lf_forward(token_lists, voices, speed, device='cpu'):
@@ -500,7 +508,7 @@ with gr.Blocks() as lf_tts:
 
 with gr.Blocks() as about:
     gr.Markdown('''
-Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L32) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
+Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L33) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
 
 ### FAQ
 **Will this be open sourced?**<br/>
@@ -582,6 +590,7 @@ with gr.Blocks() as app:
         [basic_tts, lf_tts, about, changelog],
         ['🔥 Basic TTS', '📖 Long Form', 'ℹ️ About', '📝 Changelog'],
     )
+    app.load(lambda r: r.session_hash, None, sk)
 
 if __name__ == '__main__':
     app.queue(api_open=True).launch()
