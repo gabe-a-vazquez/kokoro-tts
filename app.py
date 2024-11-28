@@ -9,6 +9,7 @@ import pypdf
 import random
 import re
 import spaces
+import threading
 import torch
 import yaml
 
@@ -253,7 +254,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
     except gr.exceptions.Error as e:
         if use_gpu:
             gr.Warning(str(e))
-            gr.Info('GPU failover to CPU')
+            gr.Info('Switching to CPU')
             out = forward(tokens, voices, speed)
         else:
             raise gr.Error(e)
@@ -323,10 +324,12 @@ with gr.Blocks() as basic_tts:
     generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
 
 @torch.no_grad()
-def lf_forward(token_lists, voices, speed, device='cpu'):
+def lf_forward(token_lists, voices, speed, stop_event, device='cpu'):
     voicepack = torch.mean(torch.stack([VOICES[device][v] for v in voices]), dim=0)
     outs = []
     for tokens in token_lists:
+        if stop_event.is_set():
+            break
         ref_s = voicepack[len(tokens)]
         s = ref_s[:, 128:]
         tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
@@ -352,8 +355,8 @@ def lf_forward(token_lists, voices, speed, device='cpu'):
     return outs
 
 @spaces.GPU
-def lf_forward_gpu(token_lists, voices, speed):
-    return lf_forward(token_lists, voices, speed, device='cuda')
+def lf_forward_gpu(token_lists, voices, speed, stop_event):
+    return lf_forward(token_lists, voices, speed, stop_event, device='cuda')
 
 def resplit_strings(arr):
     # Handle edge cases
@@ -407,35 +410,45 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     segments = [row for t in texts for row in recursive_split(t, voice)]
     return [(i, *row) for i, row in enumerate(segments)]
 
-def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
+def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True, audio_stream=None):
+    if audio_stream is not None and len(audio_stream) == 3:
+        audio_stream[-1].set()
     token_lists = list(map(tokenize, segments['Tokens']))
     voices = resolve_voices(voice)
     speed = clamp_speed(speed)
-    wavs = []
     trim = int(trim / speed)
     pad_between = int(pad_between / speed)
-    batch_size = 100
-    for i in range(0, len(token_lists), batch_size):
+    batch_sizes = [89, 55, 34, 21, 13, 8, 5, 3, 2, 1, 1]
+    i = 0
+    stop_event = threading.Event()
+    while i < len(token_lists):
+        bs = batch_sizes.pop() if batch_sizes else 100
         try:
             if use_gpu:
-                outs = lf_forward_gpu(token_lists[i:i+batch_size], voices, speed)
+                outs = lf_forward_gpu(token_lists[i:i+bs], voices, speed, stop_event)
             else:
-                outs = lf_forward(token_lists[i:i+batch_size], voices, speed)
+                outs = lf_forward(token_lists[i:i+bs], voices, speed, stop_event)
         except gr.exceptions.Error as e:
-            if wavs:
+            if use_gpu:
                 gr.Warning(str(e))
+                gr.Info('Switching to CPU')
+                outs = lf_forward(token_lists[i:i+bs], voices, speed, stop_event)
+                use_gpu = False
             else:
                 raise gr.Error(e)
-            break
         for out in outs:
             if trim > 0:
                 if trim * 2 >= len(out):
                     continue
                 out = out[trim:-trim]
-            if wavs and pad_between > 0:
-                wavs.append(np.zeros(pad_between))
-            wavs.append(out)
-    return (SAMPLE_RATE, np.concatenate(wavs)) if wavs else None
+            if i > 0 and pad_between > 0:
+                yield SAMPLE_RATE, np.zeros(pad_between), stop_event
+            yield SAMPLE_RATE, out, stop_event
+        i += bs
+
+def lf_stop(audio_stream):
+    if audio_stream is not None and len(audio_stream) == 3:
+        audio_stream[-1].set()
 
 def did_change_segments(segments):
     x = len(segments) if segments['Length'].any() else 0
@@ -473,23 +486,27 @@ with gr.Blocks() as lf_tts:
                 skip_square_brackets = gr.Checkbox(True, label='Skip [Square Brackets]', info='Recommended for academic papers, Wikipedia articles, or texts with citations')
                 newline_split = gr.Number(2, label='Newline Split', info='Split the input text on this many newlines. Affects how the text is segmented.', precision=0, minimum=0)
             with gr.Row():
+                upload_btn = gr.Button('Upload', variant='secondary')
                 segment_btn = gr.Button('Tokenize', variant='primary')
-                generate_btn = gr.Button('Generate x0', variant='secondary', interactive=False)
         with gr.Column():
-            audio = gr.Audio(interactive=False, label='Output Audio')
+            audio_stream = gr.Audio(label='Output Audio Stream', interactive=False, streaming=True, autoplay=True)
             with gr.Accordion('Audio Settings', open=True):
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
                 trim = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='✂️ Trim', info='Cut from both ends')
                 pad_between = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='🔇 Pad Between', info='How much silence to insert between segments')
+            with gr.Row():
+                generate_btn = gr.Button('Generate x0', variant='secondary', interactive=False)
+                stop_btn = gr.Button('Stop', variant='stop')
     with gr.Row():
         segments = gr.Dataframe(headers=['#', 'Text', 'Tokens', 'Length'], row_count=(1, 'dynamic'), col_count=(4, 'fixed'), label='Segments', interactive=False, wrap=True)
         segments.change(fn=did_change_segments, inputs=[segments], outputs=[segment_btn, generate_btn])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu], outputs=[audio])
+    generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu, audio_stream], outputs=[audio_stream])
+    stop_btn.click(lf_stop, inputs=[audio_stream], outputs=[audio_stream])
 
 with gr.Blocks() as about:
     gr.Markdown("""
-Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L31) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
+Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L32) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
 
 ### FAQ
 **Will this be open sourced?**<br/>
