@@ -323,11 +323,15 @@ with gr.Blocks() as basic_tts:
     text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
     generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
 
+stop_event = threading.Event()
+
 @torch.no_grad()
 def lf_forward(token_lists, voices, speed, device='cpu'):
     voicepack = torch.mean(torch.stack([VOICES[device][v] for v in voices]), dim=0)
     outs = []
     for tokens in token_lists:
+        if stop_event.is_set():
+            break
         ref_s = voicepack[len(tokens)]
         s = ref_s[:, 128:]
         tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
@@ -409,6 +413,8 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     return [(i, *row) for i, row in enumerate(segments)]
 
 def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
+    global stop_event
+    stop_event.clear()
     token_lists = list(map(tokenize, segments['Tokens']))
     voices = resolve_voices(voice)
     speed = clamp_speed(speed)
@@ -441,6 +447,10 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
             yield (SAMPLE_RATE, out)
         i += bs
 
+def lf_stop():
+    global stop_event
+    stop_event.set()
+
 def did_change_segments(segments):
     x = len(segments) if segments['Length'].any() else 0
     return [
@@ -458,15 +468,7 @@ def extract_text(file):
             return '\n'.join([line for line in r])
     return None
 
-with gr.Blocks(css='''
-    .square-stop-btn {
-        aspect-ratio: 1/1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-    }
-''') as lf_tts:
+with gr.Blocks() as lf_tts:
     with gr.Row():
         with gr.Column():
             file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
@@ -495,13 +497,13 @@ with gr.Blocks(css='''
                 pad_between = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='🔇 Pad Between', info='How much silence to insert between segments')
             with gr.Row():
                 generate_btn = gr.Button('Generate x0', variant='secondary', interactive=False)
-                stop_btn = gr.Button('■', variant='stop', elem_classes=['square-stop-btn'])
+                stop_btn = gr.Button('Stop', variant='stop')
     with gr.Row():
         segments = gr.Dataframe(headers=['#', 'Text', 'Tokens', 'Length'], row_count=(1, 'dynamic'), col_count=(4, 'fixed'), label='Segments', interactive=False, wrap=True)
         segments.change(fn=did_change_segments, inputs=[segments], outputs=[segment_btn, generate_btn])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
     generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu], outputs=[audio_stream])
-    stop_btn.click(lambda: None, outputs=[audio_stream])
+    stop_btn.click(lf_stop)
 
 with gr.Blocks() as about:
     gr.Markdown('''
