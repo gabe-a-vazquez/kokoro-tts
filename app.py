@@ -48,8 +48,8 @@ sents = set()
 for txt in {'harvard_sentences', 'llama3_command-r_sentences_1st_person', 'llama3_command-r_sentences_excla', 'llama3_command-r_questions'}:
     txt += '.txt'
     subprocess.run(['wget', f'https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena/resolve/main/{txt}'])
-    with open('harvard_sentences.txt') as f:
-        sents.update(f.read().strip().splitlines())
+    with open(txt, 'r') as r:
+        sents.update(r.read().strip().splitlines())
 print('len(sents)', len(sents))
 
 def parens_to_angles(s):
