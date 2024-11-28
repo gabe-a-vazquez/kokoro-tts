@@ -547,8 +547,16 @@ Vast was chosen over other compute providers due to its competitive on-demand ho
 The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
 
 ### Gradio API
-**The API has been restricted due to high request volume degrading the demo experience.**<br/>
-~~This Space can be used via API. The following code block can be copied and run in one Google Colab cell.~~
+The API has been restricted due to high request volume degrading the demo experience.
+
+### Licenses
+Inference code: MIT<br/>
+[eSpeak NG](https://github.com/espeak-ng/espeak-ng): GPL-3.0<br/>
+Random English texts: Unknown from [Quotable Data](https://github.com/quotable-io/data/blob/master/data/quotes.json)<br/>
+Random Japanese texts: CC0 public domain from [Common Voice](https://github.com/common-voice/common-voice/tree/main/server/data/ja)
+''')
+'''
+This Space can be used via API. The following code block can be copied and run in one Google Colab cell.
 ```
 # 1️⃣ Install the Gradio Python client
 !pip install -q gradio_client
@@ -567,14 +575,7 @@ display(Audio(audio_path, autoplay=True))
 print(out_ps)
 ```
 This Space and the underlying Kokoro model are both under development and subject to change. Reliability is not guaranteed. Hugging Face and Gradio might enforce their own rate limits.
-
-### Licenses
-Inference code: MIT<br/>
-[eSpeak NG](https://github.com/espeak-ng/espeak-ng): GPL-3.0<br/>
-Random English texts: Unknown from [Quotable Data](https://github.com/quotable-io/data/blob/master/data/quotes.json)<br/>
-Random Japanese texts: CC0 public domain from [Common Voice](https://github.com/common-voice/common-voice/tree/main/server/data/ja)
-''')
-
+'''
 with gr.Blocks() as changelog:
     gr.Markdown('''
 **28 Nov 2024**<br/>
