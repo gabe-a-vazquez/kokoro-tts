@@ -1,3 +1,4 @@
+from datetime import datetime
 from huggingface_hub import snapshot_download
 from katsu import Katsu
 from models import build_model
@@ -245,6 +246,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
+    print('🔥', datetime.now(), len(ps), voices, use_gpu)
     try:
         if use_gpu:
             out = forward_gpu(tokens, voices, speed)
@@ -417,16 +419,18 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
     i = 0
     while i < len(token_lists):
         bs = batch_sizes.pop() if batch_sizes else 100
+        tokens = token_lists[i:i+bs]
+        print('📖', datetime.now(), len(tokens), voices, use_gpu)
         try:
             if use_gpu:
-                outs = lf_forward_gpu(token_lists[i:i+bs], voices, speed)
+                outs = lf_forward_gpu(tokens, voices, speed)
             else:
-                outs = lf_forward(token_lists[i:i+bs], voices, speed)
+                outs = lf_forward(tokens, voices, speed)
         except gr.exceptions.Error as e:
             if use_gpu:
                 gr.Warning(str(e))
                 gr.Info('Switching to CPU')
-                outs = lf_forward(token_lists[i:i+bs], voices, speed)
+                outs = lf_forward(tokens, voices, speed)
                 use_gpu = False
             else:
                 raise gr.Error(e)
@@ -494,7 +498,7 @@ with gr.Blocks() as lf_tts:
 
 with gr.Blocks() as about:
     gr.Markdown('''
-Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L31) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
+Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L32) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
 
 ### FAQ
 **Will this be open sourced?**<br/>
