@@ -460,7 +460,9 @@ def extract_text(file):
 with gr.Blocks() as lf_tts:
     with gr.Row():
         with gr.Column():
+            file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
             text = gr.Textbox(label='Input Text', info='Generate speech in batches of 100 text segments and automatically join them together')
+            file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
             with gr.Row():
                 voice = gr.Dropdown(list(CHOICES.items()), value='af', allow_custom_value=True, label='Voice', info='Starred voices are more stable')
                 use_gpu = gr.Dropdown(
@@ -473,10 +475,6 @@ with gr.Blocks() as lf_tts:
             with gr.Accordion('Text Settings', open=False):
                 skip_square_brackets = gr.Checkbox(True, label='Skip [Square Brackets]', info='Recommended for academic papers, Wikipedia articles, or texts with citations')
                 newline_split = gr.Number(2, label='Newline Split', info='Split the input text on this many newlines. Affects how the text is segmented.', precision=0, minimum=0)
-            with gr.Row():
-                upload_btn = gr.UploadButton('Upload txt or pdf', file_types=['text'])
-                segment_btn = gr.Button('Tokenize', variant='primary')
-                upload_btn.upload(fn=extract_text, inputs=[upload_btn], outputs=[text])
         with gr.Column():
             audio_stream = gr.Audio(label='Output Audio Stream', interactive=False, streaming=True, autoplay=True)
             with gr.Accordion('Audio Settings', open=True):
@@ -484,14 +482,13 @@ with gr.Blocks() as lf_tts:
                 trim = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='✂️ Trim', info='Cut from both ends')
                 pad_between = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='🔇 Pad Between', info='How much silence to insert between segments')
             with gr.Row():
+                segment_btn = gr.Button('Tokenize', variant='primary')
                 generate_btn = gr.Button('Generate x0', variant='secondary', interactive=False)
-                stop_btn = gr.Button('Stop', variant='stop')
     with gr.Row():
         segments = gr.Dataframe(headers=['#', 'Text', 'Tokens', 'Length'], row_count=(1, 'dynamic'), col_count=(4, 'fixed'), label='Segments', interactive=False, wrap=True)
         segments.change(fn=did_change_segments, inputs=[segments], outputs=[segment_btn, generate_btn])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_event = generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu], outputs=[audio_stream])
-    stop_btn.click(cancels=[generate_event])
+    generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu], outputs=[audio_stream])
 
 with gr.Blocks() as about:
     gr.Markdown('''
