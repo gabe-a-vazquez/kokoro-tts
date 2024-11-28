@@ -50,6 +50,7 @@ for txt in {'harvard_sentences', 'llama3_command-r_sentences_1st_person', 'llama
     subprocess.run(['wget', f'https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena/resolve/main/{txt}'])
     with open('harvard_sentences.txt') as f:
         sents.update(f.read().strip().splitlines())
+print('len(sents)', len(sents))
 
 def parens_to_angles(s):
     return s.replace('(', '«').replace(')', '»')
