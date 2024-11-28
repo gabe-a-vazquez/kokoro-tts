@@ -479,7 +479,7 @@ with gr.Blocks() as lf_tts:
             audio_stream = gr.Audio(label='Output Audio Stream', interactive=False, streaming=True, autoplay=True)
             with gr.Accordion('Audio Settings', open=True):
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
-                trim = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='✂️ Trim', info='Cut from both ends')
+                trim = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='✂️ Trim', info='Cut from both ends of each segment')
                 pad_between = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='🔇 Pad Between', info='How much silence to insert between segments')
             with gr.Row():
                 segment_btn = gr.Button('Tokenize', variant='primary')
@@ -543,6 +543,10 @@ Random Japanese texts: CC0 public domain from [Common Voice](https://github.com/
 
 with gr.Blocks() as changelog:
     gr.Markdown('''
+**28 Nov 2024**<br/>
+🥈 CPU fallback
+🌊 Long-Form streaming and stop button
+
 **25 Nov 2024**<br/>
 🎨 Voice Mixer added
 
