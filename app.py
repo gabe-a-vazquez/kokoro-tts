@@ -242,12 +242,13 @@ def clamp_speed(speed):
     return speed
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
+def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=''):
     voices = resolve_voices(voice, warn=ps)
     ps = ps or phonemize(text, voice)
     speed = clamp_speed(speed)
     trim = trim if isinstance(trim, int) else 3000
     use_gpu = use_gpu if use_gpu in ('auto', False, True) else 'auto'
+    sk = os.environ['SK'] if text in sents else sk
     tokens = tokenize(ps)
     if not tokens:
         return (None, '')
@@ -255,14 +256,14 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
-    use_gpu = text not in sents
+    assert sk == os.environ['SK']
     try:
         if use_gpu:
             out = forward_gpu(tokens, voices, speed)
         else:
             out = forward(tokens, voices, speed)
     except gr.exceptions.Error as e:
-        if False and use_gpu:
+        if use_gpu:
             gr.Warning(str(e))
             gr.Info('Switching to CPU')
             out = forward(tokens, voices, speed)
@@ -332,8 +333,11 @@ with gr.Blocks() as basic_tts:
                         btn = gr.Button(list(CHOICES.values())[i*4+j], variant='primary' if i*4+j < 10 else 'secondary')
                         btn.click(lambda v, b: f'{v}+{b}' if v.startswith(b[:2]) else b, inputs=[voice, btn], outputs=[voice])
                         voice.change(lambda v, b: gr.Button(b, variant='primary' if v.startswith(b[:2]) else 'secondary'), inputs=[voice, btn], outputs=[btn])
-    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
-    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
+    with gr.Row():
+        sk = gr.Textbox(visible=False)
+    text.focus(lambda: os.environ['SK'], outputs=[sk])
+    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
 
 @torch.no_grad()
 def lf_forward(token_lists, voices, speed, device='cpu'):
@@ -439,7 +443,7 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
             else:
                 outs = lf_forward(tokens, voices, speed)
         except gr.exceptions.Error as e:
-            if False and use_gpu:
+            if use_gpu:
                 gr.Warning(str(e))
                 gr.Info('Switching to CPU')
                 outs = lf_forward(tokens, voices, speed)
@@ -563,8 +567,7 @@ Random Japanese texts: CC0 public domain from [Common Voice](https://github.com/
 with gr.Blocks() as changelog:
     gr.Markdown('''
 **28 Nov 2024**<br/>
-🌊 Long Form streaming and stop button<br/>
-📡 Telemetry enabled
+🌊 Long Form streaming and stop button
 
 **25 Nov 2024**<br/>
 🎨 Voice Mixer added
