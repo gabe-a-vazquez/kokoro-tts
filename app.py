@@ -204,7 +204,8 @@ def tokenize(ps):
 SAMPLE_RATE = 24000
 
 @torch.no_grad()
-def forward(tokens, voices, speed, device='cpu'):
+def forward(tokens, voices, speed, sk, device='cpu'):
+    assert sk == os.environ['SK'], sk
     ref_s = torch.mean(torch.stack([VOICES[device][v][len(tokens)] for v in voices]), dim=0)
     tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
     input_lengths = torch.LongTensor([tokens.shape[-1]]).to(device)
@@ -229,8 +230,8 @@ def forward(tokens, voices, speed, device='cpu'):
     return models[device].decoder(asr, F0_pred, N_pred, ref_s[:, :128]).squeeze().cpu().numpy()
 
 @spaces.GPU(duration=10)
-def forward_gpu(tokens, voices, speed):
-    return forward(tokens, voices, speed, device='cuda')
+def forward_gpu(tokens, voices, speed, sk):
+    return forward(tokens, voices, speed, sk, device='cuda')
 
 def clamp_speed(speed):
     if not isinstance(speed, float) and not isinstance(speed, int):
@@ -257,18 +258,18 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=N
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
     if sk != os.environ['SK']:
-        print('❌', datetime.now(), text, voices, ps, use_gpu)
+        print('❌', datetime.now(), text, voices, ps, sk)
         return (None, '')
     try:
         if use_gpu:
-            out = forward_gpu(tokens, voices, speed)
+            out = forward_gpu(tokens, voices, speed, sk)
         else:
-            out = forward(tokens, voices, speed)
+            out = forward(tokens, voices, speed, sk)
     except gr.exceptions.Error as e:
         if use_gpu:
             gr.Warning(str(e))
             gr.Info('Switching to CPU')
-            out = forward(tokens, voices, speed)
+            out = forward(tokens, voices, speed, sk)
         else:
             raise gr.Error(e)
             print('🔥', datetime.now(), len(ps), use_gpu, repr(e))
@@ -342,7 +343,8 @@ with gr.Blocks() as basic_tts:
     generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
 
 @torch.no_grad()
-def lf_forward(token_lists, voices, speed, device='cpu'):
+def lf_forward(token_lists, voices, speed, sk, device='cpu'):
+    assert sk == os.environ['SK'], sk
     voicepack = torch.mean(torch.stack([VOICES[device][v] for v in voices]), dim=0)
     outs = []
     for tokens in token_lists:
@@ -371,8 +373,8 @@ def lf_forward(token_lists, voices, speed, device='cpu'):
     return outs
 
 @spaces.GPU
-def lf_forward_gpu(token_lists, voices, speed):
-    return lf_forward(token_lists, voices, speed, device='cuda')
+def lf_forward_gpu(token_lists, voices, speed, sk):
+    return lf_forward(token_lists, voices, speed, sk, device='cuda')
 
 def resplit_strings(arr):
     # Handle edge cases
@@ -426,7 +428,7 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     segments = [row for t in texts for row in recursive_split(t, voice)]
     return [(i, *row) for i, row in enumerate(segments)]
 
-def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
+def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True, sk=None):
     token_lists = list(map(tokenize, segments['Tokens']))
     voices = resolve_voices(voice)
     speed = clamp_speed(speed)
@@ -435,20 +437,23 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
     use_gpu = True
     batch_sizes = [89, 55, 34, 21, 13, 8, 5, 3, 2, 1, 1]
     i = 0
+    if sk != os.environ['SK']:
+        print('❌', datetime.now(), len(segments), voices, sk)
+        return
     while i < len(token_lists):
         bs = batch_sizes.pop() if batch_sizes else 100
         tokens = token_lists[i:i+bs]
         print('📖', datetime.now(), len(tokens), voices, use_gpu)
         try:
             if use_gpu:
-                outs = lf_forward_gpu(tokens, voices, speed)
+                outs = lf_forward_gpu(tokens, voices, speed, sk)
             else:
-                outs = lf_forward(tokens, voices, speed)
+                outs = lf_forward(tokens, voices, speed, sk)
         except gr.exceptions.Error as e:
             if use_gpu:
                 gr.Warning(str(e))
                 gr.Info('Switching to CPU')
-                outs = lf_forward(tokens, voices, speed)
+                outs = lf_forward(tokens, voices, speed, sk)
                 use_gpu = False
             elif outs:
                 gr.Warning(repr(e))
@@ -513,8 +518,11 @@ with gr.Blocks() as lf_tts:
     with gr.Row():
         segments = gr.Dataframe(headers=['#', 'Text', 'Tokens', 'Length'], row_count=(1, 'dynamic'), col_count=(4, 'fixed'), label='Segments', interactive=False, wrap=True)
         segments.change(fn=did_change_segments, inputs=[segments], outputs=[segment_btn, generate_btn])
+    with gr.Row():
+        sk = gr.Textbox(visible=False)
+    segments.change(lambda: os.environ['SK'], outputs=[sk])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_event = generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu], outputs=[audio_stream])
+    generate_event = generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu, sk], outputs=[audio_stream])
     stop_btn.click(fn=None, cancels=generate_event)
 
 with gr.Blocks() as about:
@@ -539,7 +547,8 @@ Vast was chosen over other compute providers due to its competitive on-demand ho
 The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
 
 ### Gradio API
-This Space can be used via API. The following code block can be copied and run in one Google Colab cell.
+**The API has been restricted due to high request volume degrading the demo experience.**
+~~This Space can be used via API. The following code block can be copied and run in one Google Colab cell.~~
 ```
 # 1️⃣ Install the Gradio Python client
 !pip install -q gradio_client
@@ -569,6 +578,7 @@ Random Japanese texts: CC0 public domain from [Common Voice](https://github.com/
 with gr.Blocks() as changelog:
     gr.Markdown('''
 **28 Nov 2024**<br/>
+🥈 CPU fallback<br/>
 🌊 Long Form streaming and stop button
 
 **25 Nov 2024**<br/>
