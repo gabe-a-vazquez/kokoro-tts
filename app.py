@@ -460,7 +460,7 @@ def extract_text(file):
 with gr.Blocks() as lf_tts:
     with gr.Row():
         with gr.Column():
-            file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
+            file_input = gr.File(file_types=['.pdf', '.txt'], label='pdf or txt')
             text = gr.Textbox(label='Input Text', info='Generate speech in batches of 100 text segments and automatically join them together')
             file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
             with gr.Row():
@@ -506,7 +506,7 @@ Unstable voices are more likely to stumble or produce unnatural artifacts, espec
 **How can CPU be faster than ZeroGPU?**<br/>
 The CPU is a dedicated resource for this Space, while the ZeroGPU pool is shared and dynamically allocated across all of HF. The ZeroGPU queue/allocator system inevitably adds latency to each request.<br/>
 For Basic TTS under ~100 tokens or characters, only a few seconds of audio need to be generated, so the actual compute is not that heavy. In these short bursts, the dedicated CPU can often compute the result faster than the total time it takes to: enter the ZeroGPU queue, wait to get allocated, and have a GPU compute and deliver the result.<br/>
-ZeroGPU catches up beyond 100 tokens and especially closer to the ~500 token context window. Long-Form mode processes batches of 100 segments at a time, so the GPU should outspeed the CPU by 1-2 orders of magnitude.
+ZeroGPU catches up beyond 100 tokens and especially closer to the ~500 token context window. Long Form mode processes batches of 100 segments at a time, so the GPU should outspeed the CPU by 1-2 orders of magnitude.
 
 ### Compute
 The model was trained on 1x A100-class 80GB instances rented from [Vast.ai](https://cloud.vast.ai/?ref_id=79907).<br/>
@@ -545,7 +545,7 @@ with gr.Blocks() as changelog:
     gr.Markdown('''
 **28 Nov 2024**<br/>
 🥈 CPU fallback
-🌊 Long-Form streaming and stop button
+🌊 Long Form streaming and stop button
 
 **25 Nov 2024**<br/>
 🎨 Voice Mixer added
@@ -574,7 +574,7 @@ with gr.Blocks() as changelog:
 with gr.Blocks() as app:
     gr.TabbedInterface(
         [basic_tts, lf_tts, about, changelog],
-        ['🔥 Basic TTS', '📖 Long-Form', 'ℹ️ About', '📝 Changelog'],
+        ['🔥 Basic TTS', '📖 Long Form', 'ℹ️ About', '📝 Changelog'],
     )
 
 if __name__ == '__main__':
