@@ -484,11 +484,13 @@ with gr.Blocks() as lf_tts:
             with gr.Row():
                 segment_btn = gr.Button('Tokenize', variant='primary')
                 generate_btn = gr.Button('Generate x0', variant='secondary', interactive=False)
+                stop_btn = gr.Button('Stop', variant='stop')
     with gr.Row():
         segments = gr.Dataframe(headers=['#', 'Text', 'Tokens', 'Length'], row_count=(1, 'dynamic'), col_count=(4, 'fixed'), label='Segments', interactive=False, wrap=True)
         segments.change(fn=did_change_segments, inputs=[segments], outputs=[segment_btn, generate_btn])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu], outputs=[audio_stream])
+    generate_event = generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu], outputs=[audio_stream])
+    stop_btn.click(fn=None, cancels=generate_event)
 
 with gr.Blocks() as about:
     gr.Markdown('''
