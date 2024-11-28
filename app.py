@@ -458,7 +458,15 @@ def extract_text(file):
             return '\n'.join([line for line in r])
     return None
 
-with gr.Blocks() as lf_tts:
+with gr.Blocks(css='''
+    .square-stop-btn {
+        aspect-ratio: 1/1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+''') as lf_tts:
     with gr.Row():
         with gr.Column():
             file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
@@ -485,15 +493,7 @@ with gr.Blocks() as lf_tts:
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
                 trim = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='✂️ Trim', info='Cut from both ends')
                 pad_between = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='🔇 Pad Between', info='How much silence to insert between segments')
-            with gr.Row(css='''
-    .square-stop-btn {
-        aspect-ratio: 1/1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-    }
-'''):
+            with gr.Row():
                 generate_btn = gr.Button('Generate x0', variant='secondary', interactive=False)
                 stop_btn = gr.Button('■', variant='stop', elem_classes=['square-stop-btn'])
     with gr.Row():
