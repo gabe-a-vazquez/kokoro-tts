@@ -544,7 +544,7 @@ Random Japanese texts: CC0 public domain from [Common Voice](https://github.com/
 with gr.Blocks() as changelog:
     gr.Markdown('''
 **28 Nov 2024**<br/>
-🥈 CPU fallback
+🥈 CPU fallback<br/>
 🌊 Long Form streaming and stop button
 
 **25 Nov 2024**<br/>
