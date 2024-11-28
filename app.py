@@ -240,7 +240,6 @@ def clamp_speed(speed):
         return 2
     return speed
 
-sk = gr.State()
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
     voices = resolve_voices(voice, warn=ps)
@@ -255,26 +254,27 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
-    global sk
-    print('🔥', datetime.now(), text, voices, ps, use_gpu, sk)
+    use_gpu = text not in sents
     try:
         if use_gpu:
             out = forward_gpu(tokens, voices, speed)
         else:
             out = forward(tokens, voices, speed)
     except gr.exceptions.Error as e:
-        if use_gpu:
+        if False and use_gpu:
             gr.Warning(str(e))
             gr.Info('Switching to CPU')
             out = forward(tokens, voices, speed)
         else:
             raise gr.Error(e)
+            print('🔥', datetime.now(), text, voices, ps, use_gpu, repr(e))
             return (None, '')
     trim = int(trim / speed)
     if trim > 0:
         if trim * 2 >= len(out):
             return (None, '')
         out = out[trim:-trim]
+    print('🔥', datetime.now(), text, voices, ps, use_gpu)
     return ((SAMPLE_RATE, out), ps)
 
 def toggle_autoplay(autoplay):
@@ -425,6 +425,7 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
     speed = clamp_speed(speed)
     trim = int(trim / speed)
     pad_between = int(pad_between / speed)
+    use_gpu = True
     batch_sizes = [89, 55, 34, 21, 13, 8, 5, 3, 2, 1, 1]
     i = 0
     while i < len(token_lists):
@@ -437,11 +438,14 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
             else:
                 outs = lf_forward(tokens, voices, speed)
         except gr.exceptions.Error as e:
-            if use_gpu:
+            if False and use_gpu:
                 gr.Warning(str(e))
                 gr.Info('Switching to CPU')
                 outs = lf_forward(tokens, voices, speed)
                 use_gpu = False
+            elif outs:
+                gr.Warning(repr(e))
+                i = len(token_lists)
             else:
                 raise gr.Error(e)
         for out in outs:
@@ -558,8 +562,8 @@ Random Japanese texts: CC0 public domain from [Common Voice](https://github.com/
 with gr.Blocks() as changelog:
     gr.Markdown('''
 **28 Nov 2024**<br/>
-🥈 CPU fallback<br/>
-🌊 Long Form streaming and stop button
+🌊 Long Form streaming and stop button<br/>
+⚠️ CPU suspended, possible abuse
 
 **25 Nov 2024**<br/>
 🎨 Voice Mixer added
