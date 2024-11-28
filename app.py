@@ -547,7 +547,7 @@ Vast was chosen over other compute providers due to its competitive on-demand ho
 The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
 
 ### Gradio API
-**The API has been restricted due to high request volume degrading the demo experience.**
+**The API has been restricted due to high request volume degrading the demo experience.**<br/>
 ~~This Space can be used via API. The following code block can be copied and run in one Google Colab cell.~~
 ```
 # 1️⃣ Install the Gradio Python client
