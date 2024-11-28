@@ -242,7 +242,7 @@ def clamp_speed(speed):
     return speed
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=''):
+def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=None):
     voices = resolve_voices(voice, warn=ps)
     ps = ps or phonemize(text, voice)
     speed = clamp_speed(speed)
@@ -256,7 +256,9 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk='
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
-    assert sk == os.environ['SK']
+    if sk != os.environ['SK']:
+        print('❌', datetime.now(), text, voices, ps, use_gpu)
+        return (None, '')
     try:
         if use_gpu:
             out = forward_gpu(tokens, voices, speed)
@@ -269,14 +271,14 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk='
             out = forward(tokens, voices, speed)
         else:
             raise gr.Error(e)
-            print('🔥', datetime.now(), text, voices, ps, use_gpu, repr(e))
+            print('🔥', datetime.now(), len(ps), use_gpu, repr(e))
             return (None, '')
     trim = int(trim / speed)
     if trim > 0:
         if trim * 2 >= len(out):
             return (None, '')
         out = out[trim:-trim]
-    print('🔥', datetime.now(), text, voices, ps, use_gpu)
+    print('🔥', datetime.now(), len(ps), use_gpu, len(out))
     return ((SAMPLE_RATE, out), ps)
 
 def toggle_autoplay(autoplay):
@@ -335,7 +337,7 @@ with gr.Blocks() as basic_tts:
                         voice.change(lambda v, b: gr.Button(b, variant='primary' if v.startswith(b[:2]) else 'secondary'), inputs=[voice, btn], outputs=[btn])
     with gr.Row():
         sk = gr.Textbox(visible=False)
-    text.focus(lambda: os.environ['SK'], outputs=[sk])
+    text.change(lambda: os.environ['SK'], outputs=[sk])
     text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
     generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
 
