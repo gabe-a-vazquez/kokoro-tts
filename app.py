@@ -9,7 +9,6 @@ import pypdf
 import random
 import re
 import spaces
-import threading
 import torch
 import yaml
 
@@ -323,15 +322,11 @@ with gr.Blocks() as basic_tts:
     text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
     generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
 
-stop_event = threading.Event()
-
 @torch.no_grad()
 def lf_forward(token_lists, voices, speed, device='cpu'):
     voicepack = torch.mean(torch.stack([VOICES[device][v] for v in voices]), dim=0)
     outs = []
     for tokens in token_lists:
-        if stop_event.is_set():
-            break
         ref_s = voicepack[len(tokens)]
         s = ref_s[:, 128:]
         tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
@@ -413,8 +408,6 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     return [(i, *row) for i, row in enumerate(segments)]
 
 def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
-    global stop_event
-    stop_event.clear()
     token_lists = list(map(tokenize, segments['Tokens']))
     voices = resolve_voices(voice)
     speed = clamp_speed(speed)
@@ -447,10 +440,6 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True):
             yield (SAMPLE_RATE, out)
         i += bs
 
-def lf_stop():
-    global stop_event
-    stop_event.set()
-
 def did_change_segments(segments):
     x = len(segments) if segments['Length'].any() else 0
     return [
@@ -471,9 +460,7 @@ def extract_text(file):
 with gr.Blocks() as lf_tts:
     with gr.Row():
         with gr.Column():
-            file_input = gr.File(file_types=['.pdf', '.txt'], label='Input File: pdf or txt')
             text = gr.Textbox(label='Input Text', info='Generate speech in batches of 100 text segments and automatically join them together')
-            file_input.upload(fn=extract_text, inputs=[file_input], outputs=[text])
             with gr.Row():
                 voice = gr.Dropdown(list(CHOICES.items()), value='af', allow_custom_value=True, label='Voice', info='Starred voices are more stable')
                 use_gpu = gr.Dropdown(
@@ -487,8 +474,9 @@ with gr.Blocks() as lf_tts:
                 skip_square_brackets = gr.Checkbox(True, label='Skip [Square Brackets]', info='Recommended for academic papers, Wikipedia articles, or texts with citations')
                 newline_split = gr.Number(2, label='Newline Split', info='Split the input text on this many newlines. Affects how the text is segmented.', precision=0, minimum=0)
             with gr.Row():
-                upload_btn = gr.Button('Upload', variant='secondary')
+                upload_btn = gr.UploadButton('Upload txt or pdf', file_types=['text'])
                 segment_btn = gr.Button('Tokenize', variant='primary')
+                upload_btn.upload(fn=extract_text, inputs=[upload_btn], outputs=[text])
         with gr.Column():
             audio_stream = gr.Audio(label='Output Audio Stream', interactive=False, streaming=True, autoplay=True)
             with gr.Accordion('Audio Settings', open=True):
@@ -502,12 +490,12 @@ with gr.Blocks() as lf_tts:
         segments = gr.Dataframe(headers=['#', 'Text', 'Tokens', 'Length'], row_count=(1, 'dynamic'), col_count=(4, 'fixed'), label='Segments', interactive=False, wrap=True)
         segments.change(fn=did_change_segments, inputs=[segments], outputs=[segment_btn, generate_btn])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu], outputs=[audio_stream])
-    stop_btn.click(lf_stop)
+    generate_event = generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu], outputs=[audio_stream])
+    stop_btn.click(cancels=[generate_event])
 
 with gr.Blocks() as about:
     gr.Markdown('''
-Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L32) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
+Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L31) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
 
 ### FAQ
 **Will this be open sourced?**<br/>
