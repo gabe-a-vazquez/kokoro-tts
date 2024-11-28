@@ -332,8 +332,8 @@ with gr.Blocks() as basic_tts:
                         btn = gr.Button(list(CHOICES.values())[i*4+j], variant='primary' if i*4+j < 10 else 'secondary')
                         btn.click(lambda v, b: f'{v}+{b}' if v.startswith(b[:2]) else b, inputs=[voice, btn], outputs=[voice])
                         voice.change(lambda v, b: gr.Button(b, variant='primary' if v.startswith(b[:2]) else 'secondary'), inputs=[voice, btn], outputs=[btn])
-    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
-    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
+    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu], outputs=[audio, out_ps])
 
 @torch.no_grad()
 def lf_forward(token_lists, voices, speed, device='cpu'):
@@ -595,7 +595,6 @@ with gr.Blocks() as app:
         [basic_tts, lf_tts, about, changelog],
         ['🔥 Basic TTS', '📖 Long Form', 'ℹ️ About', '📝 Changelog'],
     )
-    app.load(lambda r: r.session_hash, None, sk)
 
 if __name__ == '__main__':
     app.queue(api_open=True).launch()
