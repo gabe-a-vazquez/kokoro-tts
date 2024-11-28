@@ -564,7 +564,7 @@ with gr.Blocks() as changelog:
     gr.Markdown('''
 **28 Nov 2024**<br/>
 🌊 Long Form streaming and stop button<br/>
-⚠️ CPU suspended, possible abuse
+📡 Telemetry enabled
 
 **25 Nov 2024**<br/>
 🎨 Voice Mixer added
