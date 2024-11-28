@@ -233,7 +233,7 @@ def clamp_speed(speed):
     return speed
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sh=None):
+def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=None):
     voices = resolve_voices(voice, warn=ps)
     ps = ps or phonemize(text, voice)
     speed = clamp_speed(speed)
@@ -246,7 +246,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sh=N
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
-    print('🔥', datetime.now(), text, voices, ps, use_gpu, sh)
+    print('🔥', datetime.now(), text, voices, ps, use_gpu, sk)
     try:
         if use_gpu:
             out = forward_gpu(tokens, voices, speed)
@@ -321,10 +321,10 @@ with gr.Blocks() as basic_tts:
                         btn = gr.Button(list(CHOICES.values())[i*4+j], variant='primary' if i*4+j < 10 else 'secondary')
                         btn.click(lambda v, b: f'{v}+{b}' if v.startswith(b[:2]) else b, inputs=[voice, btn], outputs=[voice])
                         voice.change(lambda v, b: gr.Button(b, variant='primary' if v.startswith(b[:2]) else 'secondary'), inputs=[voice, btn], outputs=[btn])
-    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sh], outputs=[audio, out_ps])
-    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sh], outputs=[audio, out_ps])
-    sh = gr.State()
-    basic_tts.load(lambda r: r.session_hash, None, sh)
+    sk = gr.State()
+    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
+    basic_tts.load(lambda r: r.session_hash, None, sk)
 
 @torch.no_grad()
 def lf_forward(token_lists, voices, speed, device='cpu'):
