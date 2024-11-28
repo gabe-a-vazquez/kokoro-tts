@@ -246,7 +246,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto'):
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
-    print('🔥', datetime.now(), len(ps), voices, use_gpu)
+    print('🔥', datetime.now(), text, voices, ps, use_gpu)
     try:
         if use_gpu:
             out = forward_gpu(tokens, voices, speed)
