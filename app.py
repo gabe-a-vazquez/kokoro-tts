@@ -271,14 +271,14 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=N
             out = forward(tokens, voices, speed, sk)
         else:
             raise gr.Error(e)
-            print('🔥', datetime.now(), len(ps), use_gpu, repr(e))
+            print('🔥', datetime.now(), voices, len(ps), use_gpu, repr(e))
             return (None, '')
     trim = int(trim / speed)
     if trim > 0:
         if trim * 2 >= len(out):
             return (None, '')
         out = out[trim:-trim]
-    print('🔥', datetime.now(), len(ps), use_gpu, len(out))
+    print('🔥', datetime.now(), voices, len(ps), use_gpu, len(out))
     return ((SAMPLE_RATE, out), ps)
 
 def toggle_autoplay(autoplay):
