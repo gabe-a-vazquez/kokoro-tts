@@ -245,7 +245,7 @@ def clamp_speed(speed):
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=None):
     sk = os.environ['SK'] if text in sents else sk
-    if sk != os.environ['SK']:
+    if sk not in {os.environ['SK'], os.environ['ARENA']}:
         return (None, '')
     voices = resolve_voices(voice, warn=ps)
     ps = ps or phonemize(text, voice)
@@ -259,6 +259,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=N
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
+    debug = '🏆' if sk == os.environ['ARENA'] else '🔥'
     try:
         if use_gpu:
             out = forward_gpu(tokens, voices, speed, sk)
@@ -271,14 +272,14 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=N
             out = forward(tokens, voices, speed, sk)
         else:
             raise gr.Error(e)
-            print('🔥', datetime.now(), voices, len(ps), use_gpu, repr(e))
+            print(debug, datetime.now(), voices, len(ps), use_gpu, repr(e))
             return (None, '')
     trim = int(trim / speed)
     if trim > 0:
         if trim * 2 >= len(out):
             return (None, '')
         out = out[trim:-trim]
-    print('🔥', datetime.now(), voices, len(ps), use_gpu, len(out))
+    print(debug, datetime.now(), voices, len(ps), use_gpu, len(out))
     return ((SAMPLE_RATE, out), ps)
 
 def toggle_autoplay(autoplay):
