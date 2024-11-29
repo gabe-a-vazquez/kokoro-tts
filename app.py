@@ -244,12 +244,14 @@ def clamp_speed(speed):
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=None):
+    sk = os.environ['SK'] if text in sents else sk
+    if sk != os.environ['SK']:
+        return (None, '')
     voices = resolve_voices(voice, warn=ps)
     ps = ps or phonemize(text, voice)
     speed = clamp_speed(speed)
     trim = trim if isinstance(trim, int) else 3000
     use_gpu = use_gpu if use_gpu in ('auto', False, True) else 'auto'
-    sk = os.environ['SK'] if text in sents else sk
     tokens = tokenize(ps)
     if not tokens:
         return (None, '')
@@ -257,9 +259,6 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=N
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
-    if sk != os.environ['SK']:
-        print('❌', datetime.now(), text, voices, ps, sk)
-        return (None, '')
     try:
         if use_gpu:
             out = forward_gpu(tokens, voices, speed, sk)
@@ -429,6 +428,8 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     return [(i, *row) for i, row in enumerate(segments)]
 
 def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True, sk=None):
+    if sk != os.environ['SK']:
+        return
     token_lists = list(map(tokenize, segments['Tokens']))
     voices = resolve_voices(voice)
     speed = clamp_speed(speed)
@@ -437,9 +438,6 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True, s
     use_gpu = True
     batch_sizes = [89, 55, 34, 21, 13, 8, 5, 3, 2, 1, 1]
     i = 0
-    if sk != os.environ['SK']:
-        print('❌', datetime.now(), len(segments), voices, sk)
-        return
     while i < len(token_lists):
         bs = batch_sizes.pop() if batch_sizes else 100
         tokens = token_lists[i:i+bs]
