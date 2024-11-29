@@ -547,7 +547,7 @@ Vast was chosen over other compute providers due to its competitive on-demand ho
 The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
 
 ### Gradio API
-The API has been restricted due to high request volume degrading the demo experience.
+The API has been restricted due to high request volume impacting CPU latency.
 
 ### Licenses
 Inference code: MIT<br/>
@@ -580,7 +580,8 @@ with gr.Blocks() as changelog:
     gr.Markdown('''
 **28 Nov 2024**<br/>
 🥈 CPU fallback<br/>
-🌊 Long Form streaming and stop button
+🌊 Long Form streaming and stop button<br/>
+✋ Restricted API due to high request volume impacting CPU latency
 
 **25 Nov 2024**<br/>
 🎨 Voice Mixer added
@@ -613,4 +614,4 @@ with gr.Blocks() as app:
     )
 
 if __name__ == '__main__':
-    app.queue(api_open=True).launch()
+    app.queue(api_open=True).launch(show_api=False)
