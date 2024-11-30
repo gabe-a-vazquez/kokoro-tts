@@ -103,7 +103,7 @@ def normalize(text):
     text = re.sub(r'\b(?:Ms\.|MS\.(?= [A-Z]))', 'Miss', text)
     text = re.sub(r'\b(?:Mrs\.|MRS\.(?= [A-Z]))', 'Mrs', text)
     text = re.sub(r'\betc\.(?! [A-Z])', 'etc', text)
-    text = re.sub(r'\b([Yy])eah\b', r"\1e'a", text)
+    text = re.sub(r'(?i)\b(y)eah?\b', r"\1e'a", text)
     text = text.replace(chr(8216), "'").replace(chr(8217), "'")
     text = text.replace(chr(8220), '"').replace(chr(8221), '"')
     text = re.sub(r'[^\S \n]', ' ', text)
@@ -111,7 +111,7 @@ def normalize(text):
     text = re.sub(r'(?<=\n) +(?=\n)', '', text)
     text = re.sub(r'\d*\.\d+|\b\d{4}s?\b|(?<!:)\b(?:[1-9]|1[0-2]):[0-5]\d\b(?!:)', split_num, text)
     text = re.sub(r'(?<=\d),(?=\d)', '', text)
-    text = re.sub(r'[$£]\d+(?:\.\d+)?(?: hundred| thousand| (?:[bm]|tr)illion)*\b|[$£]\d+\.\d\d?\b', flip_money, text)
+    text = re.sub(r'(?i)[$£]\d+(?:\.\d+)?(?: hundred| thousand| (?:[bm]|tr)illion)*\b|[$£]\d+\.\d\d?\b', flip_money, text)
     text = re.sub(r'\d*\.\d+', point_num, text)
     text = re.sub(r'(?<=\d)-(?=\d)', ' to ', text) # TODO: could be minus
     text = re.sub(r'(?<=\d)S', ' S', text)
