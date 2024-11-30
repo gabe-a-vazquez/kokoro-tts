@@ -271,9 +271,8 @@ def clamp_speed(speed):
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=None):
-    sk = os.environ['SK'] if text in sents else sk
     ps = ps or phonemize(text, voice)
-    if not sk and ps.strip('"') in harvsents:
+    if not sk and (text in sents or ps.strip('"') in harvsents):
         sk = os.environ['SK']
     if sk not in {os.environ['SK'], os.environ['ARENA']}:
         return (None, '')
