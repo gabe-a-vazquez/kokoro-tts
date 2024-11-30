@@ -3,6 +3,7 @@ from huggingface_hub import snapshot_download
 from katsu import Katsu
 from models import build_model
 import gradio as gr
+import librosa
 import numpy as np
 import os
 import phonemizer
@@ -269,8 +270,17 @@ def clamp_speed(speed):
         return 2
     return speed
 
+def clamp_top_db(top_db):
+    if not isinstance(top_db, float) and not isinstance(top_db, int):
+        return 60
+    elif top_db < 30:
+        return None
+    elif top_db > 90:
+        return 90
+    return top_db
+
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=None):
+def generate(text, voice='af', ps=None, speed=1, top_db=60, use_gpu='auto', sk=None):
     ps = ps or phonemize(text, voice)
     if not sk and (text in sents or ps.strip('"') in harvsents):
         sk = os.environ['SK']
@@ -278,7 +288,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=N
         return (None, '')
     voices = resolve_voices(voice, warn=ps)
     speed = clamp_speed(speed)
-    trim = trim if isinstance(trim, int) else 3000
+    top_db = clamp_top_db(top_db)
     use_gpu = use_gpu if use_gpu in ('auto', False, True) else 'auto'
     tokens = tokenize(ps)
     if not tokens:
@@ -302,11 +312,8 @@ def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=N
             raise gr.Error(e)
             print(debug, datetime.now(), voices, len(ps), use_gpu, repr(e))
             return (None, '')
-    trim = int(trim / speed)
-    if trim > 0:
-        if trim * 2 >= len(out):
-            return (None, '')
-        out = out[trim:-trim]
+    if top_db:
+        out, _ = librosa.effects.trim(out, top_db=top_db)
     print(debug, datetime.now(), voices, len(ps), use_gpu, len(out))
     return ((SAMPLE_RATE, out), ps)
 
@@ -352,7 +359,7 @@ with gr.Blocks() as basic_tts:
                 autoplay = gr.Checkbox(value=True, label='Autoplay')
                 autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
-                trim = gr.Slider(minimum=0, maximum=24000, value=3000, step=1000, label='✂️ Trim', info='Cut from both ends')
+                top_db = gr.Slider(minimum=0, maximum=90, value=60, step=30, label='✂️ Trim top_db (librosa.effects.trim)', info='Threshold (in db) below peak to trim')
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
     with gr.Accordion('Voice Mixer', open=False):
@@ -367,8 +374,8 @@ with gr.Blocks() as basic_tts:
     with gr.Row():
         sk = gr.Textbox(visible=False)
     text.change(lambda: os.environ['SK'], outputs=[sk])
-    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
-    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
+    text.submit(generate, inputs=[text, voice, in_ps, speed, top_db, use_gpu, sk], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, top_db, use_gpu, sk], outputs=[audio, out_ps])
 
 @torch.no_grad()
 def lf_forward(token_lists, voices, speed, sk, device='cpu'):
@@ -457,14 +464,14 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     segments = [row for t in texts for row in recursive_split(t, voice)]
     return [(i, *row) for i, row in enumerate(segments)]
 
-def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True, sk=None):
+def lf_generate(segments, voice, speed=1, top_db=0, pad_between=0, use_gpu=True, sk=None):
     if sk != os.environ['SK']:
         return
     token_lists = list(map(tokenize, segments['Tokens']))
     voices = resolve_voices(voice)
     speed = clamp_speed(speed)
-    trim = int(trim / speed)
-    pad_between = int(pad_between / speed)
+    top_db = clamp_top_db(top_db)
+    pad_between = int(pad_between)
     use_gpu = True
     batch_sizes = [89, 55, 34, 21, 13, 8, 5, 3, 2, 1, 1]
     i = 0
@@ -489,10 +496,8 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True, s
             else:
                 raise gr.Error(e)
         for out in outs:
-            if trim > 0:
-                if trim * 2 >= len(out):
-                    continue
-                out = out[trim:-trim]
+            if top_db:
+                out, _ = librosa.effects.trim(out, top_db=top_db)
             if i > 0 and pad_between > 0:
                 yield (SAMPLE_RATE, np.zeros(pad_between))
             yield (SAMPLE_RATE, out)
@@ -537,8 +542,8 @@ with gr.Blocks() as lf_tts:
             audio_stream = gr.Audio(label='Output Audio Stream', interactive=False, streaming=True, autoplay=True)
             with gr.Accordion('Audio Settings', open=True):
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
-                trim = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='✂️ Trim', info='Cut from both ends of each segment')
-                pad_between = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='🔇 Pad Between', info='How much silence to insert between segments')
+                top_db = gr.Slider(minimum=0, maximum=90, value=0, step=30, label='✂️ Trim top_db (librosa.effects.trim)', info='Threshold (in db) below peak to trim')
+                pad_between = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='🔇 Pad Between', info='How many silent samples to insert between segments')
             with gr.Row():
                 segment_btn = gr.Button('Tokenize', variant='primary')
                 generate_btn = gr.Button('Generate x0', variant='secondary', interactive=False)
@@ -550,12 +555,12 @@ with gr.Blocks() as lf_tts:
         sk = gr.Textbox(visible=False)
     segments.change(lambda: os.environ['SK'], outputs=[sk])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_event = generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu, sk], outputs=[audio_stream])
+    generate_event = generate_btn.click(lf_generate, inputs=[segments, voice, speed, top_db, pad_between, use_gpu, sk], outputs=[audio_stream])
     stop_btn.click(fn=None, cancels=generate_event)
 
 with gr.Blocks() as about:
     gr.Markdown('''
-Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L33) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
+Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L34) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
 
 ### FAQ
 **Will this be open sourced?**<br/>

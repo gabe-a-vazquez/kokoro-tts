@@ -1,5 +1,6 @@
 fugashi
 gradio
+librosa
 mojimoji
 munch
 phonemizer
