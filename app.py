@@ -180,6 +180,22 @@ def resolve_voices(voice, warn=True):
     voices = [v for v in voices if v in VOICES['cpu']]
     return voices if voices else ['af']
 
+def get_vocab():
+    _pad = "$"
+    _punctuation = ';:,.!?¡¿—…"«»“” '
+    _letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    _letters_ipa = "ɑɐɒæɓʙβɔɕçɗɖðʤəɘɚɛɜɝɞɟʄɡɠɢʛɦɧħɥʜɨɪʝɭɬɫɮʟɱɯɰŋɳɲɴøɵɸθœɶʘɹɺɾɻʀʁɽʂʃʈʧʉʊʋⱱʌɣɤʍχʎʏʑʐʒʔʡʕʢǀǁǂǃˈˌːˑʼʴʰʱʲʷˠˤ˞↓↑→↗↘'̩'ᵻ"
+    symbols = [_pad] + list(_punctuation) + list(_letters) + list(_letters_ipa)
+    dicts = {}
+    for i in range(len((symbols))):
+        dicts[symbols[i]] = i
+    return dicts
+
+VOCAB = get_vocab()
+
+def tokenize(ps):
+    return [i for i in map(VOCAB.get, ps) if i is not None]
+
 def phonemize(text, voice, norm=True):
     lang = resolve_voices(voice)[0][0]
     if norm:
@@ -211,22 +227,6 @@ def length_to_mask(lengths):
     mask = torch.arange(lengths.max()).unsqueeze(0).expand(lengths.shape[0], -1).type_as(lengths)
     mask = torch.gt(mask+1, lengths.unsqueeze(1))
     return mask
-
-def get_vocab():
-    _pad = "$"
-    _punctuation = ';:,.!?¡¿—…"«»“” '
-    _letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-    _letters_ipa = "ɑɐɒæɓʙβɔɕçɗɖðʤəɘɚɛɜɝɞɟʄɡɠɢʛɦɧħɥʜɨɪʝɭɬɫɮʟɱɯɰŋɳɲɴøɵɸθœɶʘɹɺɾɻʀʁɽʂʃʈʧʉʊʋⱱʌɣɤʍχʎʏʑʐʒʔʡʕʢǀǁǂǃˈˌːˑʼʴʰʱʲʷˠˤ˞↓↑→↗↘'̩'ᵻ"
-    symbols = [_pad] + list(_punctuation) + list(_letters) + list(_letters_ipa)
-    dicts = {}
-    for i in range(len((symbols))):
-        dicts[symbols[i]] = i
-    return dicts
-
-VOCAB = get_vocab()
-
-def tokenize(ps):
-    return [i for i in map(VOCAB.get, ps) if i is not None]
 
 SAMPLE_RATE = 24000
 
