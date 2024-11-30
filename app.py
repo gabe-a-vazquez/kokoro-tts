@@ -618,7 +618,7 @@ This Space and the underlying Kokoro model are both under development and subjec
 with gr.Blocks() as changelog:
     gr.Markdown('''
 **30 Nov 2024**<br/>
-✂️ Better trimming with `librosa.effects.trim`
+✂️ Better trimming with `librosa.effects.trim`<br/>
 🏆 https://hf.co/spaces/Pendrokar/TTS-Spaces-Arena
 
 **28 Nov 2024**<br/>
