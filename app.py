@@ -270,17 +270,17 @@ def clamp_speed(speed):
         return 2
     return speed
 
-def clamp_top_db(top_db):
-    if not isinstance(top_db, float) and not isinstance(top_db, int):
-        return 60
-    elif top_db < 30:
-        return None
-    elif top_db > 90:
-        return 90
-    return top_db
+def clamp_trim(trim):
+    if not isinstance(trim, float) and not isinstance(trim, int):
+        return 0.5
+    elif trim < 0:
+        return 0
+    elif trim > 1:
+        return 0.5
+    return trim
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
-def generate(text, voice='af', ps=None, speed=1, top_db=60, use_gpu='auto', sk=None):
+def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=None):
     ps = ps or phonemize(text, voice)
     if not sk and (text in sents or ps.strip('"') in harvsents):
         sk = os.environ['SK']
@@ -288,7 +288,7 @@ def generate(text, voice='af', ps=None, speed=1, top_db=60, use_gpu='auto', sk=N
         return (None, '')
     voices = resolve_voices(voice, warn=ps)
     speed = clamp_speed(speed)
-    top_db = clamp_top_db(top_db)
+    trim = clamp_trim(trim)
     use_gpu = use_gpu if use_gpu in ('auto', False, True) else 'auto'
     tokens = tokenize(ps)
     if not tokens:
@@ -312,8 +312,11 @@ def generate(text, voice='af', ps=None, speed=1, top_db=60, use_gpu='auto', sk=N
             raise gr.Error(e)
             print(debug, datetime.now(), voices, len(ps), use_gpu, repr(e))
             return (None, '')
-    if top_db:
-        out, _ = librosa.effects.trim(out, top_db=top_db)
+    if trim:
+        a, b = librosa.effects.trim(out, top_db=30)[1]
+        a = int(a*trim)
+        b = int(len(out)-(len(out)-b)*trim)
+        out = out[a:b]
     print(debug, datetime.now(), voices, len(ps), use_gpu, len(out))
     return ((SAMPLE_RATE, out), ps)
 
@@ -359,7 +362,7 @@ with gr.Blocks() as basic_tts:
                 autoplay = gr.Checkbox(value=True, label='Autoplay')
                 autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
-                top_db = gr.Slider(minimum=0, maximum=90, value=60, step=30, label='✂️ Trim top_db (librosa.effects.trim)', info='Threshold (in db) below peak to trim')
+                trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
     with gr.Accordion('Voice Mixer', open=False):
@@ -374,8 +377,8 @@ with gr.Blocks() as basic_tts:
     with gr.Row():
         sk = gr.Textbox(visible=False)
     text.change(lambda: os.environ['SK'], outputs=[sk])
-    text.submit(generate, inputs=[text, voice, in_ps, speed, top_db, use_gpu, sk], outputs=[audio, out_ps])
-    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, top_db, use_gpu, sk], outputs=[audio, out_ps])
+    text.submit(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
+    generate_btn.click(generate, inputs=[text, voice, in_ps, speed, trim, use_gpu, sk], outputs=[audio, out_ps])
 
 @torch.no_grad()
 def lf_forward(token_lists, voices, speed, sk, device='cpu'):
@@ -464,13 +467,13 @@ def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2
     segments = [row for t in texts for row in recursive_split(t, voice)]
     return [(i, *row) for i, row in enumerate(segments)]
 
-def lf_generate(segments, voice, speed=1, top_db=0, pad_between=0, use_gpu=True, sk=None):
+def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True, sk=None):
     if sk != os.environ['SK']:
         return
     token_lists = list(map(tokenize, segments['Tokens']))
     voices = resolve_voices(voice)
     speed = clamp_speed(speed)
-    top_db = clamp_top_db(top_db)
+    trim = clamp_trim(trim)
     pad_between = int(pad_between)
     use_gpu = True
     batch_sizes = [89, 55, 34, 21, 13, 8, 5, 3, 2, 1, 1]
@@ -496,8 +499,11 @@ def lf_generate(segments, voice, speed=1, top_db=0, pad_between=0, use_gpu=True,
             else:
                 raise gr.Error(e)
         for out in outs:
-            if top_db:
-                out, _ = librosa.effects.trim(out, top_db=top_db)
+            if trim:
+                a, b = librosa.effects.trim(out, top_db=30)[1]
+                a = int(a*trim)
+                b = int(len(out)-(len(out)-b)*trim)
+                out = out[a:b]
             if i > 0 and pad_between > 0:
                 yield (SAMPLE_RATE, np.zeros(pad_between))
             yield (SAMPLE_RATE, out)
@@ -542,7 +548,7 @@ with gr.Blocks() as lf_tts:
             audio_stream = gr.Audio(label='Output Audio Stream', interactive=False, streaming=True, autoplay=True)
             with gr.Accordion('Audio Settings', open=True):
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
-                top_db = gr.Slider(minimum=0, maximum=90, value=0, step=30, label='✂️ Trim top_db (librosa.effects.trim)', info='Threshold (in db) below peak to trim')
+                trim = gr.Slider(minimum=0, maximum=1, value=0, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
                 pad_between = gr.Slider(minimum=0, maximum=24000, value=0, step=1000, label='🔇 Pad Between', info='How many silent samples to insert between segments')
             with gr.Row():
                 segment_btn = gr.Button('Tokenize', variant='primary')
@@ -555,7 +561,7 @@ with gr.Blocks() as lf_tts:
         sk = gr.Textbox(visible=False)
     segments.change(lambda: os.environ['SK'], outputs=[sk])
     segment_btn.click(segment_and_tokenize, inputs=[text, voice, skip_square_brackets, newline_split], outputs=[segments])
-    generate_event = generate_btn.click(lf_generate, inputs=[segments, voice, speed, top_db, pad_between, use_gpu, sk], outputs=[audio_stream])
+    generate_event = generate_btn.click(lf_generate, inputs=[segments, voice, speed, trim, pad_between, use_gpu, sk], outputs=[audio_stream])
     stop_btn.click(fn=None, cancels=generate_event)
 
 with gr.Blocks() as about:
