@@ -58,18 +58,14 @@ def parens_to_angles(s):
 def split_num(num):
     num = num.group()
     if '.' in num:
-        # Decimal
-        a, b = num.split('.')
-        return ' point '.join([a, ' '.join(b)])
+        return num
     elif ':' in num:
-        # Time
         h, m = [int(n) for n in num.split(':')]
         if m == 0:
             return f"{h} o'clock"
         elif m < 10:
             return f'{h} oh {m}'
         return f'{h} {m}'
-    # Year
     year = int(num[:4])
     if year < 1100 or year % 1000 < 10:
         return num
@@ -81,6 +77,24 @@ def split_num(num):
         elif right < 10:
             return f'{left} oh {right}{s}'
     return f'{left} {right}{s}'
+
+def flip_money(m):
+    m = m.group()
+    bill = 'dollar' if m[0] == '$' else 'pound'
+    if m[-1].isalpha():
+        return f'{m[1:]} {bill}s'
+    elif '.' not in m:
+        s = '' if m[1:] == '1' else 's'
+        return f'{m[1:]} {bill}{s}'
+    b, c = m[1:].split('.')
+    s = '' if b == '1' else 's'
+    c = int(c.ljust(2, '0'))
+    coins = f"cent{'' if c == 1 else 's'}" if m[0] == '$' else ('penny' if c == 1 else 'pence')
+    return f'{b} {bill}{s} and {c} {coins}'
+
+def point_num(num):
+    a, b = num.group().split('.')
+    return ' point '.join([a, ' '.join(b)])
 
 def normalize(text):
     # TODO: Custom text normalization rules?
@@ -97,6 +111,8 @@ def normalize(text):
     text = re.sub(r'(?<=\n) +(?=\n)', '', text)
     text = re.sub(r'\d*\.\d+|\b\d{4}s?\b|(?<!:)\b(?:[1-9]|1[0-2]):[0-5]\d\b(?!:)', split_num, text)
     text = re.sub(r'(?<=\d),(?=\d)', '', text)
+    text = re.sub(r'[$£]\d+(?:\.\d+)?(?: hundred| thousand| (?:[bm]|tr)illion)*\b|[$£]\d+\.\d\d?\b', flip_money, text)
+    text = re.sub(r'\d*\.\d+', point_num, text)
     text = re.sub(r'(?<=\d)-(?=\d)', ' to ', text) # TODO: could be minus
     text = re.sub(r'(?<=\d)S', ' S', text)
     text = re.sub(r"(?<=[BCDFGHJ-NP-TV-Z])'?s\b", "'S", text)
