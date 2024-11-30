@@ -201,6 +201,12 @@ def phonemize(text, voice, norm=True):
         gr.Warning('Japanese tokenizer does not handle English letters')
     return ps.strip()
 
+harvsents = set()
+with open('harvsents.txt', 'r') as r:
+    for line in r:
+        harvsents.add(phonemize(line, 'af'))
+        harvsents.add(phonemize(line, 'bf_0'))
+
 def length_to_mask(lengths):
     mask = torch.arange(lengths.max()).unsqueeze(0).expand(lengths.shape[0], -1).type_as(lengths)
     mask = torch.gt(mask+1, lengths.unsqueeze(1))
@@ -266,10 +272,12 @@ def clamp_speed(speed):
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice='af', ps=None, speed=1, trim=3000, use_gpu='auto', sk=None):
     sk = os.environ['SK'] if text in sents else sk
+    ps = ps or phonemize(text, voice)
+    if not sk and ps.strip('"') in harvsents:
+        sk = os.environ['SK']
     if sk not in {os.environ['SK'], os.environ['ARENA']}:
         return (None, '')
     voices = resolve_voices(voice, warn=ps)
-    ps = ps or phonemize(text, voice)
     speed = clamp_speed(speed)
     trim = trim if isinstance(trim, int) else 3000
     use_gpu = use_gpu if use_gpu in ('auto', False, True) else 'auto'
@@ -599,6 +607,9 @@ This Space and the underlying Kokoro model are both under development and subjec
 '''
 with gr.Blocks() as changelog:
     gr.Markdown('''
+**30 Nov 2024**<br/>
+🏆 https://hf.co/spaces/Pendrokar/TTS-Spaces-Arena
+
 **28 Nov 2024**<br/>
 🥈 CPU fallback<br/>
 🌊 Long Form streaming and stop button<br/>
