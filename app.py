@@ -96,19 +96,24 @@ def point_num(num):
     a, b = num.group().split('.')
     return ' point '.join([a, ' '.join(b)])
 
-def normalize(text):
-    # TODO: Custom text normalization rules?
+def normalize_text(text, lang):
+    text = text.replace(chr(8216), "'").replace(chr(8217), "'")
+    text = text.replace('«', chr(8220)).replace('»', chr(8221))
+    text = text.replace(chr(8220), '"').replace(chr(8221), '"')
+    text = parens_to_angles(text)
+    for a, b in zip('、。！，：；？', ',.!,:;?'):
+        text = text.replace(a, b+' ')
+    text = re.sub(r'[^\S \n]', ' ', text)
+    text = re.sub(r'  +', ' ', text)
+    text = re.sub(r'(?<=\n) +(?=\n)', '', text)
+    if lang == 'j':
+        return text.strip()
     text = re.sub(r'\bD[Rr]\.(?= [A-Z])', 'Doctor', text)
     text = re.sub(r'\b(?:Mr\.|MR\.(?= [A-Z]))', 'Mister', text)
     text = re.sub(r'\b(?:Ms\.|MS\.(?= [A-Z]))', 'Miss', text)
     text = re.sub(r'\b(?:Mrs\.|MRS\.(?= [A-Z]))', 'Mrs', text)
     text = re.sub(r'\betc\.(?! [A-Z])', 'etc', text)
     text = re.sub(r'(?i)\b(y)eah?\b', r"\1e'a", text)
-    text = text.replace(chr(8216), "'").replace(chr(8217), "'")
-    text = text.replace(chr(8220), '"').replace(chr(8221), '"')
-    text = re.sub(r'[^\S \n]', ' ', text)
-    text = re.sub(r'  +', ' ', text)
-    text = re.sub(r'(?<=\n) +(?=\n)', '', text)
     text = re.sub(r'\d*\.\d+|\b\d{4}s?\b|(?<!:)\b(?:[1-9]|1[0-2]):[0-5]\d\b(?!:)', split_num, text)
     text = re.sub(r'(?<=\d),(?=\d)', '', text)
     text = re.sub(r'(?i)[$£]\d+(?:\.\d+)?(?: hundred| thousand| (?:[bm]|tr)illion)*\b|[$£]\d+\.\d\d?\b', flip_money, text)
@@ -119,7 +124,7 @@ def normalize(text):
     text = re.sub(r"(?<=X')S\b", 's', text)
     text = re.sub(r'(?:[A-Za-z]\.){2,} [a-z]', lambda m: m.group().replace('.', '-'), text)
     text = re.sub(r'(?i)(?<=[A-Z])\.(?=[A-Z])', '-', text)
-    return parens_to_angles(text).strip()
+    return text.strip()
 
 phonemizers = dict(
     a=phonemizer.backend.EspeakBackend(language='en-us', preserve_punctuation=True, with_stress=True),
@@ -178,7 +183,7 @@ def resolve_voices(voice, warn=True):
 def phonemize(text, voice, norm=True):
     lang = resolve_voices(voice)[0][0]
     if norm:
-        text = normalize(text)
+        text = normalize_text(text, lang)
     ps = phonemizers[lang].phonemize([text])
     ps = ps[0] if ps else ''
     # TODO: Custom phonemization rules?
@@ -438,9 +443,10 @@ def recursive_split(text, voice):
     return recursive_split(a, voice) + recursive_split(b, voice)
 
 def segment_and_tokenize(text, voice, skip_square_brackets=True, newline_split=2):
+    lang = resolve_voices(voice)[0][0]
     if skip_square_brackets:
         text = re.sub(r'\[.*?\]', '', text)
-    texts = [t.strip() for t in re.split('\n{'+str(newline_split)+',}', normalize(text))] if newline_split > 0 else [normalize(text)]
+    texts = [t.strip() for t in re.split('\n{'+str(newline_split)+',}', normalize_text(text, lang))] if newline_split > 0 else [normalize_text(text, lang)]
     segments = [row for t in texts for row in recursive_split(t, voice)]
     return [(i, *row) for i, row in enumerate(segments)]
 
