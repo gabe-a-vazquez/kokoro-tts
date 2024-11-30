@@ -279,6 +279,14 @@ def clamp_trim(trim):
         return 0.5
     return trim
 
+def trim_if_needed(out, trim):
+    if not trim:
+        return out
+    a, b = librosa.effects.trim(out, top_db=30)[1]
+    a = int(a*trim)
+    b = int(len(out)-(len(out)-b)*trim)
+    return out[a:b]
+
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=None):
     ps = ps or phonemize(text, voice)
@@ -312,11 +320,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=No
             raise gr.Error(e)
             print(debug, datetime.now(), voices, len(ps), use_gpu, repr(e))
             return (None, '')
-    if trim:
-        a, b = librosa.effects.trim(out, top_db=30)[1]
-        a = int(a*trim)
-        b = int(len(out)-(len(out)-b)*trim)
-        out = out[a:b]
+    out = trim_if_needed(out, trim)
     print(debug, datetime.now(), voices, len(ps), use_gpu, len(out))
     return ((SAMPLE_RATE, out), ps)
 
@@ -499,13 +503,9 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True, s
             else:
                 raise gr.Error(e)
         for out in outs:
-            if trim:
-                a, b = librosa.effects.trim(out, top_db=30)[1]
-                a = int(a*trim)
-                b = int(len(out)-(len(out)-b)*trim)
-                out = out[a:b]
             if i > 0 and pad_between > 0:
                 yield (SAMPLE_RATE, np.zeros(pad_between))
+            out = trim_if_needed(out, trim)
             yield (SAMPLE_RATE, out)
         i += bs
 
@@ -618,6 +618,7 @@ This Space and the underlying Kokoro model are both under development and subjec
 with gr.Blocks() as changelog:
     gr.Markdown('''
 **30 Nov 2024**<br/>
+✂️ Better trimming with `librosa.effects.trim`
 🏆 https://hf.co/spaces/Pendrokar/TTS-Spaces-Arena
 
 **28 Nov 2024**<br/>
