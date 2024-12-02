@@ -293,7 +293,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=No
     if not sk and (text in sents or ps.strip('"') in harvsents):
         sk = os.environ['SK']
     if sk not in {os.environ['SK'], os.environ['ARENA']}:
-        print('❌', datetime.now(), voices, len(ps), use_gpu, sk)
+        print('❌', datetime.now(), text, voices, use_gpu, sk)
         return (None, '')
     voices = resolve_voices(voice, warn=ps)
     speed = clamp_speed(speed)
