@@ -290,11 +290,9 @@ def trim_if_needed(out, trim):
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=None):
     ps = ps or phonemize(text, voice)
-    if not sk and (text in sents or ps.strip('"') in harvsents):
-        sk = os.environ['SK']
     if sk not in {os.environ['SK'], os.environ['ARENA']}:
-        print('❌', datetime.now(), text, voice, use_gpu, sk)
-        return (None, '')
+        assert text in sents or ps.strip('"') in harvsents, ('❌', datetime.now(), text, voice, use_gpu, sk)
+        sk = os.environ['SK']
     voices = resolve_voices(voice, warn=ps)
     speed = clamp_speed(speed)
     trim = clamp_trim(trim)
