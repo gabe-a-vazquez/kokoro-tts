@@ -233,7 +233,7 @@ SAMPLE_RATE = 24000
 
 @torch.no_grad()
 def forward(tokens, voices, speed, sk, device='cpu'):
-    assert sk in {os.environ['SK'], os.environ['ARENA']}, sk
+    assert sk in {os.environ['SK'], os.environ['ARENA'], os.environ['TEMP']}, sk
     ref_s = torch.mean(torch.stack([VOICES[device][v][len(tokens)] for v in voices]), dim=0)
     tokens = torch.LongTensor([[0, *tokens, 0]]).to(device)
     input_lengths = torch.LongTensor([tokens.shape[-1]]).to(device)
@@ -290,7 +290,7 @@ def trim_if_needed(out, trim):
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=None):
     ps = ps or phonemize(text, voice)
-    if sk not in {os.environ['SK'], os.environ['ARENA']}:
+    if sk not in {os.environ['SK'], os.environ['ARENA'], os.environ['TEMP']}:
         assert text in sents or ps.strip('"') in harvsents, ('❌', datetime.now(), text, voice, use_gpu, sk)
         sk = os.environ['ARENA']
     voices = resolve_voices(voice, warn=ps)
@@ -304,7 +304,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=No
         tokens = tokens[:510]
     ps = ''.join(next(k for k, v in VOCAB.items() if i == v) for i in tokens)
     use_gpu = len(ps) > 99 if use_gpu == 'auto' else use_gpu
-    debug = '🏆' if sk == os.environ['ARENA'] else '🔥'
+    debug = '🔥' if sk == os.environ['SK'] else '🏆'
     try:
         if use_gpu:
             out = forward_gpu(tokens, voices, speed, sk)
