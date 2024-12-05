@@ -218,11 +218,11 @@ def phonemize(text, voice, norm=True):
         gr.Warning('Japanese tokenizer does not handle English letters')
     return ps.strip()
 
-harvsents = set()
-with open('harvsents.txt', 'r') as r:
+harvard_sentences = set()
+with open('harvard_sentences.txt', 'r') as r:
     for line in r:
-        harvsents.add(phonemize(line, 'af'))
-        harvsents.add(phonemize(line, 'bf_0'))
+        harvard_sentences.add(phonemize(line, 'af'))
+        harvard_sentences.add(phonemize(line, 'bf_0'))
 
 def length_to_mask(lengths):
     mask = torch.arange(lengths.max()).unsqueeze(0).expand(lengths.shape[0], -1).type_as(lengths)
@@ -291,7 +291,7 @@ def trim_if_needed(out, trim):
 def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=None):
     ps = ps or phonemize(text, voice)
     if sk not in {os.environ['SK'], os.environ['ARENA'], os.environ['TEMP']}:
-        assert text in sents or ps.strip('"') in harvsents, ('❌', datetime.now(), text, voice, use_gpu, sk)
+        assert text in sents or ps.strip('"') in harvard_sentences, ('❌', datetime.now(), text, voice, use_gpu, sk)
         sk = os.environ['ARENA']
     voices = resolve_voices(voice, warn=ps)
     speed = clamp_speed(speed)
