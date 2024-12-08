@@ -34,15 +34,12 @@ PARAM_COUNT = sum(p.numel() for value in models['cpu'].values() for p in value.p
 assert PARAM_COUNT < 82_000_000, PARAM_COUNT
 
 random_texts = {}
-for lang in ['en', 'ja']:
+for lang in ['en', 'fr', 'ja', 'ko', 'zh']:
     with open(f'{lang}.txt', 'r') as r:
         random_texts[lang] = [line.strip() for line in r]
 
 def get_random_text(voice):
-    if voice[0] == 'j':
-        lang = 'ja'
-    else:
-        lang = 'en'
+    lang = dict(a='en', b='en', f='fr', j='ja', k='ko', z='zh')[voice[0]]
     return random.choice(random_texts[lang])
 
 sents = set()
@@ -326,6 +323,98 @@ def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=No
 def toggle_autoplay(autoplay):
     return gr.Audio(interactive=False, label='Output Audio', autoplay=autoplay)
 
+PREVIEW_LANGUAGES = {
+'🇺🇸 en-US': 'a',
+'🇬🇧 en-GB': 'b',
+'🇫🇷 fr-FR': 'f',
+'🇯🇵 ja-JP': 'j',
+'🇰🇷 ko-KR': 'k',
+'🇨🇳 zh-CN': 'z',
+}
+
+PREVIEW_CHOICES = dict(
+a={
+'🇺🇸 🚺 American Female ⭐': 'af',
+'🇺🇸 🚺 Bella ⭐': 'af_bella',
+'🇺🇸 🚺 Nicole ⭐': 'af_nicole',
+'🇺🇸 🚺 Sarah ⭐': 'af_sarah',
+'🇺🇸 🚺 Alloy': 'af_alloy',
+'🇺🇸 🚺 Jessica': 'af_jessica',
+'🇺🇸 🚺 Matilda': 'af_matilda',
+'🇺🇸 🚺 Nova': 'af_nova',
+'🇺🇸 🚺 River': 'af_river',
+'🇺🇸 🚺 Sky': 'af_sky',
+'🇺🇸 🚹 Adam ⭐': 'am_adam',
+'🇺🇸 🚹 Michael ⭐': 'am_michael',
+'🇺🇸 🚹 Echo': 'am_echo',
+'🇺🇸 🚹 Eric': 'am_eric',
+'🇺🇸 🚹 Liam': 'am_liam',
+'🇺🇸 🚹 Onyx': 'am_onyx',
+'🇺🇸 🚹 Will 🧪': 'am_will',
+},
+b={
+'🇬🇧 🚺 Alice': 'bf_alice',
+'🇬🇧 🚺 Lily': 'bf_lily',
+'🇬🇧 🚹 Lewis ⭐': 'bm_lewis',
+'🇬🇧 🚹 Daniel': 'bm_daniel',
+'🇬🇧 🚹 Fable': 'bm_fable',
+'🇬🇧 🚹 George': 'bm_george',
+},
+f={'🇫🇷 🚺 French Alpha': 'fr_alpha'},
+j={
+'🇯🇵 🚺 Japanese Alpha': 'jf_alpha',
+'🇯🇵 🚺 Japanese Beta': 'jf_theta',
+'🇯🇵 🚺 Japanese Gamma': 'jf_iota',
+'🇯🇵 🚺 Japanese Delta': 'jf_kappa',
+'🇯🇵 🚺 Japanese Epsilon': 'jf_beta_0',
+'🇯🇵 🚺 Japanese Zeta': 'jf_gamma_0',
+'🇯🇵 🚺 Japanese Eta': 'jf_delta_0',
+'🇯🇵 🚺 Japanese Theta': 'jf_epsilon',
+'🇯🇵 🚺 Japanese Iota': 'jf_zeta',
+'🇯🇵 🚺 Japanese Kappa': 'jf_eta',
+'🇯🇵 🚹 Japanese Omega': 'jm_omega',
+},
+k={
+'🇰🇷 🚺 Korean Alpha': 'kf_alpha',
+'🇰🇷 🚺 Korean Beta': 'kf_beta',
+'🇰🇷 🚺 Korean Gamma': 'kf_gamma',
+'🇰🇷 🚺 Korean Delta': 'kf_delta',
+'🇰🇷 🚺 Korean Epsilon': 'kf_epsilon',
+'🇰🇷 🚺 Korean Zeta': 'kf_zeta',
+'🇰🇷 🚺 Korean Eta': 'kf_eta',
+'🇰🇷 🚺 Korean Theta': 'kf_theta',
+'🇰🇷 🚺 Korean Iota': 'kf_iota',
+'🇰🇷 🚺 Korean Kappa': 'kf_kappa',
+'🇰🇷 🚺 Korean Lambda': 'kf_lambda',
+'🇰🇷 🚺 Korean Mu': 'kf_mu',
+'🇰🇷 🚺 Korean Nu': 'kf_nu',
+'🇰🇷 🚺 Korean Xi': 'kf_xi',
+'🇰🇷 🚺 Korean Omicron': 'kf_omicron',
+'🇰🇷 🚹 Korean Pi': 'km_pi',
+'🇰🇷 🚹 Korean Rho': 'km_rho',
+'🇰🇷 🚹 Korean Sigma': 'km_sigma',
+'🇰🇷 🚹 Korean Tau': 'km_tau',
+'🇰🇷 🚹 Korean Upsilon': 'km_upsilon',
+'🇰🇷 🚹 Korean Phi': 'km_phi',
+'🇰🇷 🚹 Korean Chi': 'km_chi',
+'🇰🇷 🚹 Korean Psi': 'km_psi',
+'🇰🇷 🚹 Korean Omega': 'km_omega',
+},
+z={
+'🇨🇳 🚺 Mandarin Alpha': 'zf_beta',
+'🇨🇳 🚺 Mandarin Beta': 'zf_gamma',
+'🇨🇳 🚺 Mandarin Gamma': 'zf_delta',
+'🇨🇳 🚺 Mandarin Delta': 'zf_epsilon',
+'🇨🇳 🚺 Mandarin Epsilon 🧪': 'zf_alpha',
+'🇨🇳 🚹 Mandarin Phi': 'zm_phi',
+'🇨🇳 🚹 Mandarin Chi': 'zm_chi',
+'🇨🇳 🚹 Mandarin Psi': 'zm_psi',
+'🇨🇳 🚹 Mandarin Omega': 'zm_omega',
+},
+)
+def change_language(value):
+    return voice = gr.Dropdown(list(PREVIEW_CHOICES[value].items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 are unstable')
+
 USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 💬', False), ('ZeroGPU 📄', True)]
 USE_GPU_INFOS = {
     'auto': 'Use CPU or GPU, whichever is faster',
@@ -335,10 +424,48 @@ USE_GPU_INFOS = {
 def change_use_gpu(value):
     return gr.Dropdown(USE_GPU_CHOICES, value=value, label='Hardware', info=USE_GPU_INFOS[value], interactive=CUDA_AVAILABLE)
 
+from gradio_client import Client
+client = Client('hexgrad/kokoro-src', hf_token=os.environ('SRC'))
+def preview(text, voice, speed, trim, use_gpu, sk):
+    return client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=use_gpu, sk=sk, api_name='/generate')[0]
+
+with gr.Blocks() as preview_tts:
+    with gr.Row():
+        with gr.Column():
+            text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text, up to ~500 characters')
+            lang = gr.Radio(choices=PREVIEW_LANGUAGES.items(), value='a')
+            with gr.Row():
+                voice = gr.Dropdown(list(PREVIEW_CHOICES['a'].items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 are unstable')
+                lang.change(fn=change_language, inputs=[lang], outputs=[voice])
+                use_gpu = gr.Dropdown(
+                    USE_GPU_CHOICES,
+                    value='auto' if CUDA_AVAILABLE else False,
+                    label='Hardware',
+                    info=USE_GPU_INFOS['auto' if CUDA_AVAILABLE else False],
+                    interactive=CUDA_AVAILABLE
+                )
+                use_gpu.change(fn=change_use_gpu, inputs=[use_gpu], outputs=[use_gpu])
+            with gr.Row():
+                random_btn = gr.Button('Random Text', variant='secondary')
+                generate_btn = gr.Button('Generate', variant='primary')
+            random_btn.click(get_random_text, inputs=[lang], outputs=[text])
+        with gr.Column():
+            audio = gr.Audio(interactive=False, label='Output Audio', autoplay=True)
+            with gr.Accordion('Audio Settings', open=False):
+                autoplay = gr.Checkbox(value=True, label='Autoplay')
+                autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
+                speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
+                trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
+    with gr.Row():
+        sk = gr.Textbox(visible=False)
+    text.change(lambda: os.environ['SK'], outputs=[sk])
+    text.submit(preview, inputs=[text, voice, speed, trim, use_gpu, sk], outputs=[audio])
+    generate_btn.click(preview, inputs=[text, voice, speed, trim, use_gpu, sk], outputs=[audio])
+
 with gr.Blocks() as basic_tts:
     with gr.Row():
         with gr.Column():
-            text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text using Kokoro, a TTS model with 80 million parameters')
+            text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text using Kokoro, a TTS model with 82 million parameters')
             with gr.Row():
                 voice = gr.Dropdown(list(CHOICES.items()), value='af', allow_custom_value=True, label='Voice', info='Starred voices are more stable')
                 use_gpu = gr.Dropdown(
@@ -565,7 +692,7 @@ with gr.Blocks() as lf_tts:
 
 with gr.Blocks() as about:
     gr.Markdown('''
-Kokoro is a frontier TTS model for its size. It has [80 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L34) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
+Kokoro is a frontier TTS model for its size. It has [82 million](https://hf.co/spaces/hexgrad/Kokoro-TTS/blob/main/app.py#L34) parameters, uses a lean [StyleTTS 2](https://github.com/yl4579/StyleTTS2) architecture, and was trained on high-quality data. The weights are currently private, but a free public demo is hosted here, at `https://hf.co/spaces/hexgrad/Kokoro-TTS`. The Community tab is open for feature requests, bug reports, etc. For other inquiries, contact `@rzvzn` on Discord.
 
 ### FAQ
 **Will this be open sourced?**<br/>
@@ -616,6 +743,11 @@ This Space and the underlying Kokoro model are both under development and subjec
 '''
 with gr.Blocks() as changelog:
     gr.Markdown('''
+**8 Dec 2024**<br/>
+🚀 Model Preview v0.22<br/>
+🗣️ 68 total voices spanning 5 languages: English, Chinese, Japanese, Korean, French<br/>
+📁 Added data card
+
 **30 Nov 2024**<br/>
 ✂️ Better trimming with `librosa.effects.trim`<br/>
 🏆 https://hf.co/spaces/Pendrokar/TTS-Spaces-Arena
@@ -649,10 +781,38 @@ with gr.Blocks() as changelog:
 🧪 Validation losses: 0.262 mel, 0.642 dur, 1.889 f0
 ''')
 
+with gr.Blocks() as data_card:
+    gr.Markdown('''
+This data card was last updated on **8 Dec 2024**.
+
+Kokoro was trained exclusively on **permissive/non-copyrighted audio data** and IPA phoneme labels. Examples of permissive/non-copyrighted audio include:
+- Public domain audio
+- Audio licensed under Apache, MIT, etc
+- Synthetic audio<sup>[1]</sup> generated by closed<sup>[2]</sup> TTS models from large providers
+- CC BY audio (see below for attribution table)
+
+[1] https://copyright.gov/ai/ai_policy_guidance.pdf
+[2] No open TTS models used
+
+### Creative Commons Attribution
+The following CC BY audio was part of the dataset used to train Kokoro.
+
+| Audio Data | Duration Used | License | Added to Training Set After |
+| ---------- | ------------- | ------- | --------------------------- |
+| [Koniwa](https://github.com/koniwa/koniwa) `tnc` | <1h | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/deed.ja) | v0.19 / 22 Nov 2024 |
+| [SIWIS](https://datashare.ed.ac.uk/handle/10283/2353) | <11h | [CC BY 4.0](https://datashare.ed.ac.uk/bitstream/handle/10283/2353/license_text) | v0.19 / 22 Nov 2024 |
+
+### Notable Datasets Not Used
+These datasets were **not** used to train Kokoro. They may be of interest to academics:
+- Emilia, `cc-by-nc-4.0`: https://huggingface.co/datasets/amphion/Emilia-Dataset
+- Expresso, `cc-by-nc-4.0`: https://huggingface.co/datasets/ylacombe/expresso
+- JVS corpus, NC clause: https://sites.google.com/site/shinnosuketakamichi/research-topics/jvs_corpus
+''')
+
 with gr.Blocks() as app:
     gr.TabbedInterface(
-        [basic_tts, lf_tts, about, changelog],
-        ['🔥 Basic TTS', '📖 Long Form', 'ℹ️ About', '📝 Changelog'],
+        [preview_tts, basic_tts, lf_tts, about, changelog, data_card],
+        ['🧪 Preview v0.22', '🔥 Basic TTS v0.19', '📖 Long Form v0.19', 'ℹ️ About', '📝 Changelog', '📁 Data'],
     )
 
 if __name__ == '__main__':
