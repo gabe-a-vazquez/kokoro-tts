@@ -339,7 +339,7 @@ a={
 '🇺🇸 🚺 Nicole ⭐': 'af_nicole',
 '🇺🇸 🚺 Sarah ⭐': 'af_sarah',
 '🇺🇸 🚺 Alloy': 'af_alloy',
-'🇺🇸 🚺 Jessica': 'af_jessica',
+'🇺🇸 🚺 Jessica 🧪': 'af_jessica',
 '🇺🇸 🚺 Matilda': 'af_matilda',
 '🇺🇸 🚺 Nova': 'af_nova',
 '🇺🇸 🚺 River': 'af_river',
@@ -362,7 +362,7 @@ b={
 },
 f={'🇫🇷 🚺 French Alpha': 'fr_alpha'},
 j={
-'🇯🇵 🚺 Japanese Alpha': 'jf_alpha',
+'🇯🇵 🚺 Japanese Alpha ⭐': 'jf_alpha',
 '🇯🇵 🚺 Japanese Beta': 'jf_theta',
 '🇯🇵 🚺 Japanese Gamma': 'jf_iota',
 '🇯🇵 🚺 Japanese Delta': 'jf_kappa',
