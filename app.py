@@ -340,7 +340,7 @@ a={
 '🇺🇸 🚺 Sarah ⭐': 'af_sarah',
 '🇺🇸 🚺 Alloy': 'af_alloy',
 '🇺🇸 🚺 Jessica 🧪': 'af_jessica',
-'🇺🇸 🚺 Matilda': 'af_matilda',
+'🇺🇸 🚺 Matilda 🧪': 'af_matilda',
 '🇺🇸 🚺 Nova': 'af_nova',
 '🇺🇸 🚺 River': 'af_river',
 '🇺🇸 🚺 Sky': 'af_sky',
@@ -414,11 +414,13 @@ z={
 )
 def change_language(value):
     choices = list(PREVIEW_CHOICES[value].items())
-    return gr.Dropdown(choices, value=choices[0][1], label='Voice', info='⭐ voices are stable, 🧪 are unstable')
+    info = 'Missing British voices will be restored later' if value == 'b' else '⭐ voices are stable, 🧪 are unstable'
+    return gr.Dropdown(choices, value=choices[0][1], label='Voice', info=info)
 
 from gradio_client import Client
 client = Client('hexgrad/kokoro-src', hf_token=os.environ['SRC'])
 def preview(text, voice, speed, trim, sk):
+    assert sk == os.environ['SK'], ('❌', datetime.now(), text, voice, sk)
     return client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=True, sk=sk, api_name='/generate')[0]
 
 with gr.Blocks() as preview_tts:
@@ -440,6 +442,12 @@ with gr.Blocks() as preview_tts:
                 autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
                 trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
+    with gr.Row():
+        gr.Markdown('''
+🎉 New! Kokoro v0.22 now supports 5 languages. 🎉
+
+📡 Telemetry: For debugging purposes, the text you enter may be printed to temporary logs, which are periodically wiped.
+''')
     with gr.Row():
         sk = gr.Textbox(visible=False)
     text.change(lambda: os.environ['SK'], outputs=[sk])
@@ -740,7 +748,7 @@ with gr.Blocks() as changelog:
 🚀 Model Preview v0.22<br/>
 🌐 5 languages: English, Chinese, Japanese, Korean, French<br/>
 🗣️ 68 total voices<br/>
-📁 Added data card
+📁 Added data card and telemetry notice
 
 **30 Nov 2024**<br/>
 ✂️ Better trimming with `librosa.effects.trim`<br/>
