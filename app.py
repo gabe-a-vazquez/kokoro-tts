@@ -442,12 +442,12 @@ with gr.Blocks() as preview_tts:
                 autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
                 trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
-    with gr.Group():
+    with gr.Row():
         gr.Markdown('''
 🎉 New! Kokoro v0.22 now supports 5 languages. 🎉
 
 📡 Telemetry: For debugging purposes, the text you enter may be printed to temporary logs, which are periodically wiped.
-''')
+''', container=True)
     with gr.Row():
         sk = gr.Textbox(visible=False)
     text.change(lambda: os.environ['SK'], outputs=[sk])
