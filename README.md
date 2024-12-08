@@ -1,6 +1,6 @@
 ---
 title: Kokoro TTS
-emoji: 🔊❤️🔊
+emoji: ❤️
 colorFrom: indigo
 colorTo: pink
 sdk: gradio
@@ -8,7 +8,7 @@ sdk_version: 5.5.0
 app_file: app.py
 pinned: true
 license: mit
-short_description: TTS with 80M parameters
+short_description: Now in 5 languages!
 ---
 
 Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
