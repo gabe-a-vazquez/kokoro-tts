@@ -747,7 +747,8 @@ with gr.Blocks() as changelog:
     gr.Markdown('''
 **8 Dec 2024**<br/>
 🚀 Model Preview v0.22<br/>
-🗣️ 68 total voices spanning 5 languages: English, Chinese, Japanese, Korean, French<br/>
+🌐 5 languages: English, Chinese, Japanese, Korean, French<br/>
+🗣️ 68 total voices<br/>
 📁 Added data card
 
 **30 Nov 2024**<br/>
@@ -813,8 +814,8 @@ These datasets were **not** used to train Kokoro. They may be of interest to aca
 
 with gr.Blocks() as app:
     gr.TabbedInterface(
-        [preview_tts, basic_tts, lf_tts, about, changelog, data_card],
-        ['🧪 Preview v0.22', '🔥 Basic TTS v0.19', '📖 Long Form v0.19', 'ℹ️ About', '📝 Changelog', '📁 Data'],
+        [preview_tts, basic_tts, lf_tts, about, data_card, changelog],
+        ['🧪 Preview v0.22', '🔥 Basic TTS v0.19', '📖 Long Form v0.19', 'ℹ️ About', '📁 Data', '📝 Changelog'],
     )
 
 if __name__ == '__main__':
