@@ -413,7 +413,8 @@ z={
 },
 )
 def change_language(value):
-    return gr.Dropdown(list(PREVIEW_CHOICES[value].items()), label='Voice', info='⭐ voices are stable, 🧪 are unstable')
+    choices = list(PREVIEW_CHOICES[value].items())
+    return gr.Dropdown(choices, value=choices[0], label='Voice', info='⭐ voices are stable, 🧪 are unstable')
 
 USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 💬', False), ('ZeroGPU 📄', True)]
 USE_GPU_INFOS = {
