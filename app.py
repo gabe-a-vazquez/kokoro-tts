@@ -416,19 +416,10 @@ def change_language(value):
     choices = list(PREVIEW_CHOICES[value].items())
     return gr.Dropdown(choices, value=choices[0][1], label='Voice', info='⭐ voices are stable, 🧪 are unstable')
 
-USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 💬', False), ('ZeroGPU 📄', True)]
-USE_GPU_INFOS = {
-    'auto': 'Use CPU or GPU, whichever is faster',
-    False: 'CPU is ~faster <100 tokens',
-    True: 'ZeroGPU is ~faster >100 tokens',
-}
-def change_use_gpu(value):
-    return gr.Dropdown(USE_GPU_CHOICES, value=value, label='Hardware', info=USE_GPU_INFOS[value], interactive=CUDA_AVAILABLE)
-
 from gradio_client import Client
 client = Client('hexgrad/kokoro-src', hf_token=os.environ['SRC'])
-def preview(text, voice, speed, trim, use_gpu, sk):
-    return client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=use_gpu, sk=sk, api_name='/generate')[0]
+def preview(text, voice, speed, trim, sk):
+    return client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=True, sk=sk, api_name='/generate')[0]
 
 with gr.Blocks() as preview_tts:
     with gr.Row():
@@ -436,17 +427,8 @@ with gr.Blocks() as preview_tts:
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text, up to ~500 characters')
-            with gr.Row():
-                voice = gr.Dropdown(list(PREVIEW_CHOICES['a'].items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 are unstable')
-                lang.change(fn=change_language, inputs=[lang], outputs=[voice])
-                use_gpu = gr.Dropdown(
-                    USE_GPU_CHOICES,
-                    value='auto' if CUDA_AVAILABLE else False,
-                    label='Hardware',
-                    info=USE_GPU_INFOS['auto' if CUDA_AVAILABLE else False],
-                    interactive=CUDA_AVAILABLE
-                )
-                use_gpu.change(fn=change_use_gpu, inputs=[use_gpu], outputs=[use_gpu])
+            voice = gr.Dropdown(list(PREVIEW_CHOICES['a'].items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 are unstable')
+            lang.change(fn=change_language, inputs=[lang], outputs=[voice])
             with gr.Row():
                 random_btn = gr.Button('Random Text', variant='secondary')
                 generate_btn = gr.Button('Generate', variant='primary')
@@ -461,8 +443,17 @@ with gr.Blocks() as preview_tts:
     with gr.Row():
         sk = gr.Textbox(visible=False)
     text.change(lambda: os.environ['SK'], outputs=[sk])
-    text.submit(preview, inputs=[text, voice, speed, trim, use_gpu, sk], outputs=[audio])
-    generate_btn.click(preview, inputs=[text, voice, speed, trim, use_gpu, sk], outputs=[audio])
+    text.submit(preview, inputs=[text, voice, speed, trim, sk], outputs=[audio])
+    generate_btn.click(preview, inputs=[text, voice, speed, trim, sk], outputs=[audio])
+
+USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 💬', False), ('ZeroGPU 📄', True)]
+USE_GPU_INFOS = {
+    'auto': 'Use CPU or GPU, whichever is faster',
+    False: 'CPU is ~faster <100 tokens',
+    True: 'ZeroGPU is ~faster >100 tokens',
+}
+def change_use_gpu(value):
+    return gr.Dropdown(USE_GPU_CHOICES, value=value, label='Hardware', info=USE_GPU_INFOS[value], interactive=CUDA_AVAILABLE)
 
 with gr.Blocks() as basic_tts:
     with gr.Row():
