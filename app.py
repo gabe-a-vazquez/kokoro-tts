@@ -413,7 +413,7 @@ z={
 },
 )
 def change_language(value):
-    return gr.Dropdown(list(PREVIEW_CHOICES[value].items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 are unstable')
+    return gr.Dropdown(list(PREVIEW_CHOICES[value].items()), label='Voice', info='⭐ voices are stable, 🧪 are unstable')
 
 USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 💬', False), ('ZeroGPU 📄', True)]
 USE_GPU_INFOS = {
@@ -433,7 +433,7 @@ with gr.Blocks() as preview_tts:
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text, up to ~500 characters')
-            lang = gr.Radio(choices=PREVIEW_LANGUAGES.items(), value='a')
+            lang = gr.Radio(choices=PREVIEW_LANGUAGES.items(), value='a', label='Language')
             with gr.Row():
                 voice = gr.Dropdown(list(PREVIEW_CHOICES['a'].items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 are unstable')
                 lang.change(fn=change_language, inputs=[lang], outputs=[voice])
