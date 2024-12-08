@@ -815,7 +815,7 @@ These datasets were **not** used to train Kokoro. They may be of interest to aca
 with gr.Blocks() as app:
     gr.TabbedInterface(
         [preview_tts, basic_tts, lf_tts, about, data_card, changelog],
-        ['🔥 Preview v0.22', '🗣️ Basic TTS v0.19', '📖 Long Form v0.19', 'ℹ️ About', '📁 Data', '📝 Changelog'],
+        ['🔥 Preview v0.22', '🗣️ TTS v0.19', '📖 Long Form v0.19', 'ℹ️ About', '📁 Data', '📝 Changelog'],
     )
 
 if __name__ == '__main__':
