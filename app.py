@@ -447,6 +447,8 @@ with gr.Blocks() as preview_tts:
 🎉 New! Kokoro v0.22 now supports 5 languages. 🎉
 
 📡 Telemetry: For debugging purposes, the text you enter may be printed to temporary logs, which are periodically wiped.
+
+⚠️ Tokenizers for Chinese, Japanese, and Korean do not correctly handle English letters yet.
 ''', container=True)
     with gr.Row():
         sk = gr.Textbox(visible=False)
