@@ -795,7 +795,7 @@ Kokoro was trained exclusively on **permissive/non-copyrighted audio data** and 
 * CC BY audio (see below for attribution table)
 
 [1] [https://copyright.gov/ai/ai_policy_guidance.pdf](https://copyright.gov/ai/ai_policy_guidance.pdf)<br/>
-[2] No open TTS models used
+[2] No synthetic audio from open TTS models or "custom voice clones"
 
 ### Creative Commons Attribution
 The following CC BY audio was part of the dataset used to train Kokoro.
