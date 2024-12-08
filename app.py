@@ -806,10 +806,10 @@ The following CC BY audio was part of the dataset used to train Kokoro.
 | [SIWIS](https://datashare.ed.ac.uk/handle/10283/2353) | <11h | [CC BY 4.0](https://datashare.ed.ac.uk/bitstream/handle/10283/2353/license_text) | v0.19 / 22 Nov 2024 |
 
 ### Notable Datasets Not Used
-These datasets were **not** used to train Kokoro. They may be of interest to academics:
+These datasets were **NOT** used to train Kokoro. They may be of interest to academics:
 * Emilia, `cc-by-nc-4.0`: https://huggingface.co/datasets/amphion/Emilia-Dataset
 * Expresso, `cc-by-nc-4.0`: https://huggingface.co/datasets/ylacombe/expresso
-* JVS corpus, NC clause: https://sites.google.com/site/shinnosuketakamichi/research-topics/jvs_corpus
+* JVS, NC clause: https://sites.google.com/site/shinnosuketakamichi/research-topics/jvs_corpus
 ''')
 
 with gr.Blocks() as app:
