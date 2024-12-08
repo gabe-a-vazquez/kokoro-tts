@@ -425,7 +425,7 @@ def change_use_gpu(value):
     return gr.Dropdown(USE_GPU_CHOICES, value=value, label='Hardware', info=USE_GPU_INFOS[value], interactive=CUDA_AVAILABLE)
 
 from gradio_client import Client
-client = Client('hexgrad/kokoro-src', hf_token=os.environ('SRC'))
+client = Client('hexgrad/kokoro-src', hf_token=os.environ['SRC'])
 def preview(text, voice, speed, trim, use_gpu, sk):
     return client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=use_gpu, sk=sk, api_name='/generate')[0]
 
