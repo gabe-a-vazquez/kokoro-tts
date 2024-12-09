@@ -457,7 +457,7 @@ with gr.Blocks() as preview_tts:
 
 📡 Telemetry: For debugging purposes, the text you enter may be printed to temporary logs, which are periodically wiped.
 
-⚠️ Tokenizers for Chinese, Japanese, and Korean do not correctly handle English letters yet.
+⚠️ Tokenizers for Chinese, Japanese, and Korean do not correctly handle English letters yet. Remove or convert them to CJK first.
 
 ⚠️ Preview v0.22 does not yet support custom pronunciation, Long Form, or Voice Mixer. You can still use these features for v0.19.
 ''', container=True)
@@ -509,16 +509,15 @@ with gr.Blocks() as basic_tts:
                 trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
-    with gr.Row():
-        with gr.Accordion('Voice Mixer', open=False):
-            gr.Markdown('Create a custom voice by mixing and matching other voices. Click an orange button to add one part to your mix, or click a gray button to start over. You can also enter a voice mix as text.')
-            for i in range(8):
-                with gr.Row():
-                    for j in range(4):
-                        with gr.Column():
-                            btn = gr.Button(list(CHOICES.values())[i*4+j], variant='primary' if i*4+j < 10 else 'secondary')
-                            btn.click(lambda v, b: f'{v}+{b}' if v.startswith(b[:2]) else b, inputs=[voice, btn], outputs=[voice])
-                            voice.change(lambda v, b: gr.Button(b, variant='primary' if v.startswith(b[:2]) else 'secondary'), inputs=[voice, btn], outputs=[btn])
+    with gr.Accordion('Voice Mixer', open=False):
+        gr.Markdown('Create a custom voice by mixing and matching other voices. Click an orange button to add one part to your mix, or click a gray button to start over. You can also enter a voice mix as text.')
+        for i in range(8):
+            with gr.Row():
+                for j in range(4):
+                    with gr.Column():
+                        btn = gr.Button(list(CHOICES.values())[i*4+j], variant='primary' if i*4+j < 10 else 'secondary')
+                        btn.click(lambda v, b: f'{v}+{b}' if v.startswith(b[:2]) else b, inputs=[voice, btn], outputs=[voice])
+                        voice.change(lambda v, b: gr.Button(b, variant='primary' if v.startswith(b[:2]) else 'secondary'), inputs=[voice, btn], outputs=[btn])
     with gr.Row():
         sk = gr.Textbox(visible=False)
     text.change(lambda: os.environ['SK'], outputs=[sk])
