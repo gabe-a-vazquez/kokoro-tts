@@ -629,7 +629,7 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True, s
     while i < len(token_lists):
         bs = batch_sizes.pop() if batch_sizes else 100
         tokens = token_lists[i:i+bs]
-        print('📖', datetime.now(), len(tokens), voices, use_gpu, segments['Text'][i:i+bs])
+        print('📖', datetime.now(), len(tokens), voices, use_gpu, ''.join(segments['Text'][i:i+bs]).replace('\n', ' '))
         try:
             if use_gpu:
                 outs = lf_forward_gpu(tokens, voices, speed, sk)
