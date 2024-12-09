@@ -506,7 +506,7 @@ with gr.Blocks() as basic_tts:
                 autoplay = gr.Checkbox(value=True, label='Autoplay')
                 autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
                 speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
-                trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
+                trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends of each segment')
             with gr.Accordion('Output Tokens', open=True):
                 out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 allowed. Same as input tokens if supplied, excluding unknowns.')
     with gr.Accordion('Voice Mixer', open=False):
