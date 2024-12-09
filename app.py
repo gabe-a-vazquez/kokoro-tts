@@ -286,6 +286,8 @@ def trim_if_needed(out, trim):
 
 # Must be backwards compatible with https://huggingface.co/spaces/Pendrokar/TTS-Spaces-Arena
 def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=None):
+    if not text.strip():
+        return (None, '')
     ps = ps or phonemize(text, voice)
     if sk not in {os.environ['SK'], os.environ['ARENA'], os.environ['TEMP']}:
         assert text in sents or ps.strip('"') in harvard_sentences, ('❌', datetime.now(), text, voice, use_gpu, sk)
@@ -420,6 +422,8 @@ def change_language(value):
 from gradio_client import Client
 client = Client('hexgrad/kokoro-src', hf_token=os.environ['SRC'])
 def preview(text, voice, speed, trim, sk):
+    if not text.strip():
+        return None
     assert sk == os.environ['SK'], ('❌', datetime.now(), text, voice, sk)
     try:
         audio, out_ps = client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=True, sk=sk, api_name='/generate')
