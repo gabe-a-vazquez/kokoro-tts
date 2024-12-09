@@ -459,7 +459,7 @@ with gr.Blocks() as preview_tts:
 
 ⚠️ Tokenizers for Chinese, Japanese, and Korean do not correctly handle English letters yet.
 
-⚠️ Preview v0.22 does not yet support custom pronunciation or Long Form. You can still use these features for v0.19.
+⚠️ Preview v0.22 does not yet support custom pronunciation, Long Form, or Voice Mixer. You can still use these features for v0.19.
 ''', container=True)
     with gr.Row():
         sk = gr.Textbox(visible=False)
