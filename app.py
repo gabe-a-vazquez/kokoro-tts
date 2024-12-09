@@ -422,7 +422,9 @@ client = Client('hexgrad/kokoro-src', hf_token=os.environ['SRC'])
 def preview(text, voice, speed, trim, sk):
     assert sk == os.environ['SK'], ('❌', datetime.now(), text, voice, sk)
     try:
-        audio = client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=True, sk=sk, api_name='/generate')[0]
+        audio, out_ps = client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=True, sk=sk, api_name='/generate')
+        if len(out_ps) == 510:
+            gr.Warning('Input may have been truncated')
     except Exception as e:
         print('📡', datetime.now(), text, voice, repr(e))
         gr.Warning('v0.22 temporarily unavailable')
@@ -456,6 +458,8 @@ with gr.Blocks() as preview_tts:
 📡 Telemetry: For debugging purposes, the text you enter may be printed to temporary logs, which are periodically wiped.
 
 ⚠️ Tokenizers for Chinese, Japanese, and Korean do not correctly handle English letters yet.
+
+⚠️ Preview v0.22 does not yet support custom pronunciation or Long Form. You can still use these features for v0.19.
 ''', container=True)
     with gr.Row():
         sk = gr.Textbox(visible=False)
