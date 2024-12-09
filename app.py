@@ -425,9 +425,9 @@ def preview(text, voice, speed, trim, sk):
         audio = client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=True, sk=sk, api_name='/generate')[0]
     except Exception as e:
         print('📡', datetime.now(), text, voice, repr(e))
-        gr.Warning('v0.22 unavailable')
+        gr.Warning('v0.22 temporarily unavailable')
         gr.Info('Switching to v0.19')
-        audio = generate(text, voice=voice, speed=speed, trim=trim, sk=sk)
+        audio = generate(text, voice=voice, speed=speed, trim=trim, sk=sk)[0]
     return audio
 
 with gr.Blocks() as preview_tts:
