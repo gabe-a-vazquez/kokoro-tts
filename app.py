@@ -819,9 +819,9 @@ The following CC BY audio was part of the dataset used to train Kokoro.
 
 ### Notable Datasets Not Used
 These datasets were **NOT** used to train Kokoro. They may be of interest to academics:
-* Emilia, `cc-by-nc-4.0`: https://huggingface.co/datasets/amphion/Emilia-Dataset
-* Expresso, `cc-by-nc-4.0`: https://huggingface.co/datasets/ylacombe/expresso
-* JVS, NC clause: https://sites.google.com/site/shinnosuketakamichi/research-topics/jvs_corpus
+* Emilia, `cc-by-nc-4.0`: `https://huggingface.co/datasets/amphion/Emilia-Dataset`
+* Expresso, `cc-by-nc-4.0`: `https://huggingface.co/datasets/ylacombe/expresso`
+* JVS, NC clause: `https://sites.google.com/site/shinnosuketakamichi/research-topics/jvs_corpus`
 ''')
 
 with gr.Blocks() as app:
