@@ -316,10 +316,10 @@ def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=No
             out = forward(tokens, voices, speed, sk)
         else:
             raise gr.Error(e)
-            print(debug, datetime.now(), voices, text, len(ps), use_gpu, repr(e))
+            print(debug, datetime.now(), voices, repr(text), len(ps), use_gpu, repr(e))
             return (None, '')
     out = trim_if_needed(out, trim)
-    print(debug, datetime.now(), voices, text, len(ps), use_gpu, len(out))
+    print(debug, datetime.now(), voices, repr(text), len(ps), use_gpu, len(out))
     return ((SAMPLE_RATE, out), ps)
 
 def toggle_autoplay(autoplay):
@@ -629,7 +629,7 @@ def lf_generate(segments, voice, speed=1, trim=0, pad_between=0, use_gpu=True, s
     while i < len(token_lists):
         bs = batch_sizes.pop() if batch_sizes else 100
         tokens = token_lists[i:i+bs]
-        print('📖', datetime.now(), len(tokens), voices, use_gpu, segments['Text'])
+        print('📖', datetime.now(), len(tokens), voices, use_gpu, segments['Text'][i:i+bs])
         try:
             if use_gpu:
                 outs = lf_forward_gpu(tokens, voices, speed, sk)
