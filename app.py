@@ -518,9 +518,9 @@ with gr.Blocks() as preview_tts:
     with gr.Row():
         with gr.Accordion('Feedback', open=True):
             new_btn = gr.Button('I prefer the new, Experimental 🧪 voice', variant='secondary')
-            new_btn.click(new_btn)
+            new_btn.click(vote, inputs=[new_btn])
             old_btn = gr.Button('I prefer the old, American Female ⭐ voice', variant='secondary')
-            old_btn.click(old_btn)
+            old_btn.click(vote, inputs=[old_btn])
     with gr.Row():
         sk = gr.Textbox(visible=False)
     text.change(lambda: os.environ['SK'], outputs=[sk])
