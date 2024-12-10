@@ -325,7 +325,7 @@ def generate(text, voice='af', ps=None, speed=1, trim=0.5, use_gpu='auto', sk=No
 def toggle_autoplay(autoplay):
     return gr.Audio(interactive=False, label='Output Audio', autoplay=autoplay)
 
-PREVIEW_LANGUAGES = {
+ML_LANGUAGES = {
 '🇺🇸 en-US': 'a',
 '🇬🇧 en-GB': 'b',
 '🇫🇷 fr-FR': 'f',
@@ -334,7 +334,7 @@ PREVIEW_LANGUAGES = {
 '🇨🇳 zh-CN': 'z',
 }
 
-PREVIEW_CHOICES = dict(
+ML_CHOICES = dict(
 a={
 '🇺🇸 🚺 American Female ⭐': 'af',
 '🇺🇸 🚺 Bella ⭐': 'af_bella',
@@ -415,13 +415,13 @@ z={
 },
 )
 def change_language(value):
-    choices = list(PREVIEW_CHOICES[value].items())
+    choices = list(ML_CHOICES[value].items())
     info = 'Missing British voices will be restored later' if value == 'b' else '⭐ voices are stable, 🧪 are unstable'
     return gr.Dropdown(choices, value=choices[0][1], label='Voice', info=info)
 
 from gradio_client import Client
 client = Client('hexgrad/kokoro-src', hf_token=os.environ['SRC'])
-def preview(text, voice, speed, trim, sk):
+def multilingual(text, voice, speed, trim, sk):
     if not text.strip():
         return None
     assert sk == os.environ['SK'], ('❌', datetime.now(), text, voice, sk)
@@ -436,13 +436,13 @@ def preview(text, voice, speed, trim, sk):
         audio = generate(text, voice=voice, speed=speed, trim=trim, sk=sk)[0]
     return audio
 
-with gr.Blocks() as preview_tts:
+with gr.Blocks() as ml_tts:
     with gr.Row():
-        lang = gr.Radio(choices=PREVIEW_LANGUAGES.items(), value='a', label='Language', show_label=False)
+        lang = gr.Radio(choices=ML_LANGUAGES.items(), value='a', label='Language', show_label=False)
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text, up to ~500 characters')
-            voice = gr.Dropdown(list(PREVIEW_CHOICES['a'].items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 are unstable')
+            voice = gr.Dropdown(list(ML_CHOICES['a'].items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 are unstable')
             lang.change(fn=change_language, inputs=[lang], outputs=[voice])
             with gr.Row():
                 random_btn = gr.Button('Random Text', variant='secondary')
@@ -459,12 +459,68 @@ with gr.Blocks() as preview_tts:
         gr.Markdown('''
 🎉 New! Kokoro v0.22 now supports 5 languages. 🎉
 
-📡 Telemetry: For debugging purposes, the text you enter may be printed to temporary logs, which are periodically wiped.
+📡 Telemetry: For debugging purposes, the text you enter anywhere in this space may be printed to temporary logs, which are periodically wiped.
 
-⚠️ Preview v0.22 does not yet support custom pronunciation, Long Form, or Voice Mixer. You can still use these features for v0.19.
+⚠️ Multilingual v0.22 does not yet support custom pronunciation, Long Form, or Voice Mixer. You can still use these features for v0.19.
 
 🇨🇳🇯🇵🇰🇷 Tokenizers for Chinese, Japanese, and Korean do not correctly handle English letters yet. Remove or convert them to CJK first.
 ''', container=True)
+    with gr.Row():
+        sk = gr.Textbox(visible=False)
+    text.change(lambda: os.environ['SK'], outputs=[sk])
+    text.submit(multilingual, inputs=[text, voice, speed, trim, sk], outputs=[audio])
+    generate_btn.click(multilingual, inputs=[text, voice, speed, trim, sk], outputs=[audio])
+
+client = Client('hexgrad/kokoro-src-x', hf_token=os.environ['SRC'])
+def preview(text, voice, speed, trim, sk):
+    if not text.strip():
+        return None
+    assert sk == os.environ['SK'], ('❌', datetime.now(), text, voice, sk)
+    try:
+        audio, out_ps = client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=True, sk=sk, api_name='/generate')
+        if len(out_ps) == 510:
+            gr.Warning('Input may have been truncated')
+    except Exception as e:
+        print('📡', datetime.now(), text, voice, repr(e))
+        gr.Warning('v0.22x temporarily unavailable')
+        gr.Info('Switching to v0.19')
+        audio = generate(text, voice=voice, speed=speed, trim=trim, sk=sk)[0]
+    return audio
+
+def vote(btn):
+    print(btn)
+    gr.Info('Thanks for the feedback!')
+
+with gr.Blocks() as preview_tts:
+    with gr.Row():
+        gr.Markdown('''
+🧪 Experimental: v0.22x is a single speaker test voice to determine if the default English voice should be changed. 🧪
+
+☝️ Check out v0.19 and multilingual v0.22 for a lot more voices, languages, and features!
+
+📡 Telemetry: For debugging purposes, the text you enter anywhere in this space may be printed to temporary logs, which are periodically wiped.
+''', container=True)
+    with gr.Row():
+        with gr.Column():
+            text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text, up to ~500 characters')
+            voice = gr.Dropdown([('🇺🇸 🚺 AF Experimental 🧪', 'afx')], value='afx', label='Voice', info='⭐ voices are stable, 🧪 are unstable', interactive=False)
+            with gr.Row():
+                random_btn = gr.Button('Random Text', variant='secondary')
+                generate_btn = gr.Button('Generate', variant='primary')
+            random_btn.click(get_random_text, inputs=[voice], outputs=[text])
+        with gr.Column():
+            audio = gr.Audio(interactive=False, label='Output Audio', autoplay=True)
+            with gr.Accordion('Audio Settings', open=False):
+                autoplay = gr.Checkbox(value=True, label='Autoplay')
+                autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
+                speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
+                trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
+    with gr.Row():
+        with gr.Accordion('Feedback', open=True):
+            new_btn = gr.Button('I prefer the new, Experimental 🧪 voice', variant='secondary')
+            new_btn.click(new_btn)
+            old_btn = gr.Button('I prefer the old, American Female ⭐ voice', variant='secondary')
+            old_btn.click(old_btn)
     with gr.Row():
         sk = gr.Textbox(visible=False)
     text.change(lambda: os.environ['SK'], outputs=[sk])
@@ -762,7 +818,7 @@ This Space and the underlying Kokoro model are both under development and subjec
 with gr.Blocks() as changelog:
     gr.Markdown('''
 **8 Dec 2024**<br/>
-🚀 Model Preview v0.22<br/>
+🚀 Multilingual v0.22<br/>
 🌐 5 languages: English, Chinese, Japanese, Korean, French<br/>
 🗣️ 68 total voices<br/>
 📁 Added data card and telemetry notice
@@ -830,8 +886,8 @@ These datasets were **NOT** used to train Kokoro. They may be of interest to aca
 
 with gr.Blocks() as app:
     gr.TabbedInterface(
-        [preview_tts, basic_tts, lf_tts, about, data_card, changelog],
-        ['🔥 Preview v0.22', '🗣️ TTS v0.19', '📖 Long Form v0.19', 'ℹ️ About', '📁 Data', '📝 Changelog'],
+        [preview_tts, ml_tts, basic_tts, lf_tts, about, data_card, changelog],
+        ['🔥 Preview v0.22x', '🌐 Multilingual v0.22', '🗣️ TTS v0.19', '📖 Long Form v0.19', 'ℹ️ About', '📁 Data', '📝 Changelog'],
     )
 
 if __name__ == '__main__':
