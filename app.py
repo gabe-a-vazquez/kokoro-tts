@@ -471,13 +471,13 @@ with gr.Blocks() as ml_tts:
     text.submit(multilingual, inputs=[text, voice, speed, trim, sk], outputs=[audio])
     generate_btn.click(multilingual, inputs=[text, voice, speed, trim, sk], outputs=[audio])
 
-client = Client('hexgrad/kokoro-src-x', hf_token=os.environ['SRC'])
+client_x = Client('hexgrad/kokoro-src-x', hf_token=os.environ['SRC'])
 def preview(text, voice, speed, trim, sk):
     if not text.strip():
         return None
     assert sk == os.environ['SK'], ('❌', datetime.now(), text, voice, sk)
     try:
-        audio, out_ps = client.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=True, sk=sk, api_name='/generate')
+        audio, out_ps = client_x.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=True, sk=sk, api_name='/generate')
         if len(out_ps) == 510:
             gr.Warning('Input may have been truncated')
     except Exception as e:
