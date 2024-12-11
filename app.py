@@ -341,8 +341,7 @@ ML_CHOICES = json.loads(client.predict(api_name='/list_voices'))
 DEFAULT_VOICE = list(ML_CHOICES['a'].values())[0]
 def change_language(value):
     choices = list(ML_CHOICES[value].items())
-    info = 'Missing British voices will be restored later' if value == 'b' else '⭐ voices are stable, 🧪 are unstable'
-    return gr.Dropdown(choices, value=choices[0][1], label='Voice', info=info)
+    return gr.Dropdown(choices, value=choices[0][1], label='Voice', info='⭐ voices are stable, 🧪 are unstable')
 
 def multilingual(text, voice, speed, trim, sk):
     if not text.strip():
