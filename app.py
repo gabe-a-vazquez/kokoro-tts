@@ -491,10 +491,16 @@ def vote(btn):
     print(btn)
     gr.Info('Thanks for the feedback!')
 
+PREVIEW_CHOICES = {
+'🇺🇸 🚺 Heart ❤️': 'af_heart',
+'🇺🇸 🚺 Spirit 🦋': 'af_spirit',
+'🇬🇧 🚺 Soul 🪽': 'bf_soul',
+}
+
 with gr.Blocks() as preview_tts:
     with gr.Row():
         gr.Markdown('''
-🧪 Experimental: v0.22x is a single speaker test voice to determine if the default English voice should be changed. 🧪
+🧪 Experimental: v0.22x previews a potential change to the default English voice. 🧪
 
 ☝️ Check out v0.19 and multilingual v0.22 for a lot more voices, languages, and features!
 
@@ -503,7 +509,7 @@ with gr.Blocks() as preview_tts:
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text, up to ~500 characters')
-            voice = gr.Dropdown([('🇺🇸 🚺 AF Experimental 🧪', 'afx')], value='afx', label='Voice', info='⭐ voices are stable, 🧪 are unstable', interactive=False)
+            voice = gr.Dropdown(list(PREVIEW_CHOICES.items()), value='af_heart', label='Voice', info='🧪 These voices are experimental')
             with gr.Row():
                 random_btn = gr.Button('Random Text', variant='secondary')
                 generate_btn = gr.Button('Generate', variant='primary')
@@ -517,10 +523,18 @@ with gr.Blocks() as preview_tts:
                 trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
     with gr.Row():
         with gr.Accordion('Feedback', open=True):
-            new_btn = gr.Button('I prefer the new, Experimental 🧪 voice', variant='secondary')
-            new_btn.click(vote, inputs=[new_btn])
-            old_btn = gr.Button('I prefer the old, American Female ⭐ voice', variant='secondary')
-            old_btn.click(vote, inputs=[old_btn])
+            with gr.Row():
+                gr.Markdown('Vote for the voice you like the best among 3 challengers and 1 defender.')
+            with gr.Row():
+                heart_btn = gr.Button('🇺🇸 🚺 Heart ❤️', variant='secondary')
+                heart_btn.click(vote, inputs=[heart_btn])
+                soul_btn = gr.Button('🇺🇸 🚺 Spirit 🦋', variant='secondary')
+                soul_btn.click(vote, inputs=[soul_btn])
+            with gr.Row():
+                spirit_btn = gr.Button('🇬🇧 🚺 Soul 🪽', variant='secondary')
+                spirit_btn.click(vote, inputs=[spirit_btn])
+                old_btn = gr.Button('🇺🇸 🚺 American Female ⭐', variant='secondary')
+                old_btn.click(vote, inputs=[old_btn])
     with gr.Row():
         sk = gr.Textbox(visible=False)
     text.change(lambda: os.environ['SK'], outputs=[sk])
