@@ -334,93 +334,16 @@ ML_LANGUAGES = {
 '🇨🇳 zh-CN': 'z',
 }
 
-ML_CHOICES = dict(
-a={
-'🇺🇸 🚺 American Female ⭐': 'af',
-'🇺🇸 🚺 Bella ⭐': 'af_bella',
-'🇺🇸 🚺 Nicole ⭐': 'af_nicole',
-'🇺🇸 🚺 Sarah ⭐': 'af_sarah',
-'🇺🇸 🚺 Alloy': 'af_alloy',
-'🇺🇸 🚺 Jessica 🧪': 'af_jessica',
-'🇺🇸 🚺 Matilda 🧪': 'af_matilda',
-'🇺🇸 🚺 Nova': 'af_nova',
-'🇺🇸 🚺 River': 'af_river',
-'🇺🇸 🚺 Sky': 'af_sky',
-'🇺🇸 🚹 Adam ⭐': 'am_adam',
-'🇺🇸 🚹 Michael ⭐': 'am_michael',
-'🇺🇸 🚹 Echo': 'am_echo',
-'🇺🇸 🚹 Eric': 'am_eric',
-'🇺🇸 🚹 Liam': 'am_liam',
-'🇺🇸 🚹 Onyx': 'am_onyx',
-'🇺🇸 🚹 Will 🧪': 'am_will',
-},
-b={
-'🇬🇧 🚺 Alice': 'bf_alice',
-'🇬🇧 🚺 Lily': 'bf_lily',
-'🇬🇧 🚹 Lewis ⭐': 'bm_lewis',
-'🇬🇧 🚹 Daniel': 'bm_daniel',
-'🇬🇧 🚹 Fable': 'bm_fable',
-'🇬🇧 🚹 George': 'bm_george',
-},
-f={'🇫🇷 🚺 French Alpha': 'fr_alpha'},
-j={
-'🇯🇵 🚺 Japanese Alpha ⭐': 'jf_alpha',
-'🇯🇵 🚺 Japanese Beta': 'jf_theta',
-'🇯🇵 🚺 Japanese Gamma': 'jf_iota',
-'🇯🇵 🚺 Japanese Delta': 'jf_kappa',
-'🇯🇵 🚺 Japanese Epsilon': 'jf_beta_0',
-'🇯🇵 🚺 Japanese Zeta': 'jf_gamma_0',
-'🇯🇵 🚺 Japanese Eta': 'jf_delta_0',
-'🇯🇵 🚺 Japanese Theta': 'jf_epsilon',
-'🇯🇵 🚺 Japanese Iota': 'jf_zeta',
-'🇯🇵 🚺 Japanese Kappa': 'jf_eta',
-'🇯🇵 🚹 Japanese Omega': 'jm_omega',
-},
-k={
-'🇰🇷 🚺 Korean Alpha': 'kf_alpha',
-'🇰🇷 🚺 Korean Beta': 'kf_beta',
-'🇰🇷 🚺 Korean Gamma': 'kf_gamma',
-'🇰🇷 🚺 Korean Delta': 'kf_delta',
-'🇰🇷 🚺 Korean Epsilon': 'kf_epsilon',
-'🇰🇷 🚺 Korean Zeta': 'kf_zeta',
-'🇰🇷 🚺 Korean Eta': 'kf_eta',
-'🇰🇷 🚺 Korean Theta': 'kf_theta',
-'🇰🇷 🚺 Korean Iota': 'kf_iota',
-'🇰🇷 🚺 Korean Kappa': 'kf_kappa',
-'🇰🇷 🚺 Korean Lambda': 'kf_lambda',
-'🇰🇷 🚺 Korean Mu': 'kf_mu',
-'🇰🇷 🚺 Korean Nu': 'kf_nu',
-'🇰🇷 🚺 Korean Xi': 'kf_xi',
-'🇰🇷 🚺 Korean Omicron': 'kf_omicron',
-'🇰🇷 🚹 Korean Pi': 'km_pi',
-'🇰🇷 🚹 Korean Rho': 'km_rho',
-'🇰🇷 🚹 Korean Sigma': 'km_sigma',
-'🇰🇷 🚹 Korean Tau': 'km_tau',
-'🇰🇷 🚹 Korean Upsilon': 'km_upsilon',
-'🇰🇷 🚹 Korean Phi': 'km_phi',
-'🇰🇷 🚹 Korean Chi': 'km_chi',
-'🇰🇷 🚹 Korean Psi': 'km_psi',
-'🇰🇷 🚹 Korean Omega': 'km_omega',
-},
-z={
-'🇨🇳 🚺 Mandarin Alpha': 'zf_beta',
-'🇨🇳 🚺 Mandarin Beta': 'zf_gamma',
-'🇨🇳 🚺 Mandarin Gamma': 'zf_delta',
-'🇨🇳 🚺 Mandarin Delta': 'zf_epsilon',
-'🇨🇳 🚺 Mandarin Epsilon 🧪': 'zf_alpha',
-'🇨🇳 🚹 Mandarin Phi': 'zm_phi',
-'🇨🇳 🚹 Mandarin Chi': 'zm_chi',
-'🇨🇳 🚹 Mandarin Psi': 'zm_psi',
-'🇨🇳 🚹 Mandarin Omega': 'zm_omega',
-},
-)
+from gradio_client import Client
+client = Client('hexgrad/kokoro-src', hf_token=os.environ['SRC'])
+import json
+ML_CHOICES = json.loads(client.predict(api_name='/list_voices'))
+DEFAULT_VOICE = list(ML_CHOICES['a'].values())[0]
 def change_language(value):
     choices = list(ML_CHOICES[value].items())
     info = 'Missing British voices will be restored later' if value == 'b' else '⭐ voices are stable, 🧪 are unstable'
     return gr.Dropdown(choices, value=choices[0][1], label='Voice', info=info)
 
-from gradio_client import Client
-client = Client('hexgrad/kokoro-src', hf_token=os.environ['SRC'])
 def multilingual(text, voice, speed, trim, sk):
     if not text.strip():
         return None
@@ -431,7 +354,7 @@ def multilingual(text, voice, speed, trim, sk):
             gr.Warning('Input may have been truncated')
     except Exception as e:
         print('📡', datetime.now(), text, voice, repr(e))
-        gr.Warning('v0.22 temporarily unavailable')
+        gr.Warning('v0.23 temporarily unavailable')
         gr.Info('Switching to v0.19')
         audio = generate(text, voice=voice, speed=speed, trim=trim, sk=sk)[0]
     return audio
@@ -442,7 +365,7 @@ with gr.Blocks() as ml_tts:
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text, up to ~500 characters')
-            voice = gr.Dropdown(list(ML_CHOICES['a'].items()), value='af', label='Voice', info='⭐ voices are stable, 🧪 are unstable')
+            voice = gr.Dropdown(list(ML_CHOICES['a'].items()), value=DEFAULT_VOICE, label='Voice', info='⭐ voices are stable, 🧪 are unstable')
             lang.change(fn=change_language, inputs=[lang], outputs=[voice])
             with gr.Row():
                 random_btn = gr.Button('Random Text', variant='secondary')
@@ -457,11 +380,11 @@ with gr.Blocks() as ml_tts:
                 trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
     with gr.Row():
         gr.Markdown('''
-🎉 New! Kokoro v0.22 now supports 5 languages. 🎉
+🎉 New! Kokoro v0.23 now supports 5 languages, including a new default voices. 🎉
 
 📡 Telemetry: For debugging purposes, the text you enter anywhere in this space may be printed to temporary logs, which are periodically wiped.
 
-⚠️ Multilingual v0.22 does not yet support custom pronunciation, Long Form, or Voice Mixer. You can still use these features for v0.19.
+⚠️ v0.23 does not yet support custom pronunciation, Long Form, or Voice Mixer. You can still use these features in v0.19.
 
 🇨🇳🇯🇵🇰🇷 Tokenizers for Chinese, Japanese, and Korean do not correctly handle English letters yet. Remove or convert them to CJK first.
 ''', container=True)
@@ -470,76 +393,6 @@ with gr.Blocks() as ml_tts:
     text.change(lambda: os.environ['SK'], outputs=[sk])
     text.submit(multilingual, inputs=[text, voice, speed, trim, sk], outputs=[audio])
     generate_btn.click(multilingual, inputs=[text, voice, speed, trim, sk], outputs=[audio])
-
-client_x = Client('hexgrad/kokoro-src-x', hf_token=os.environ['SRC'])
-def preview(text, voice, speed, trim, sk):
-    if not text.strip():
-        return None
-    assert sk == os.environ['SK'], ('❌', datetime.now(), text, voice, sk)
-    try:
-        audio, out_ps = client_x.predict(text=text, voice=voice, speed=speed, trim=trim, use_gpu=True, sk=sk, api_name='/generate')
-        if len(out_ps) == 510:
-            gr.Warning('Input may have been truncated')
-    except Exception as e:
-        print('📡', datetime.now(), text, voice, repr(e))
-        gr.Warning('v0.22x temporarily unavailable')
-        gr.Info('Switching to v0.19')
-        audio = generate(text, voice=voice, speed=speed, trim=trim, sk=sk)[0]
-    return audio
-
-def vote(btn):
-    print(btn)
-    gr.Info('Thanks for the feedback!')
-
-PREVIEW_CHOICES = {
-'🇺🇸 🚺 Heart ❤️': 'af_heart',
-'🇺🇸 🚺 Spirit 🦋': 'af_spirit',
-'🇬🇧 🚺 Soul 🪽': 'bf_soul',
-}
-
-with gr.Blocks() as preview_tts:
-    with gr.Row():
-        gr.Markdown('''
-🧪 Experimental: v0.22x previews a potential change to the default English voice. 🧪
-
-☝️ Check out v0.19 and multilingual v0.22 for a lot more voices, languages, and features!
-
-📡 Telemetry: For debugging purposes, the text you enter anywhere in this space may be printed to temporary logs, which are periodically wiped.
-''', container=True)
-    with gr.Row():
-        with gr.Column():
-            text = gr.Textbox(label='Input Text', info='Generate speech for one segment of text, up to ~500 characters')
-            voice = gr.Dropdown(list(PREVIEW_CHOICES.items()), value='af_heart', label='Voice', info='🧪 These voices are experimental')
-            with gr.Row():
-                random_btn = gr.Button('Random Text', variant='secondary')
-                generate_btn = gr.Button('Generate', variant='primary')
-            random_btn.click(get_random_text, inputs=[voice], outputs=[text])
-        with gr.Column():
-            audio = gr.Audio(interactive=False, label='Output Audio', autoplay=True)
-            with gr.Accordion('Audio Settings', open=False):
-                autoplay = gr.Checkbox(value=True, label='Autoplay')
-                autoplay.change(toggle_autoplay, inputs=[autoplay], outputs=[audio])
-                speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='⚡️ Speed', info='Adjust the speaking speed')
-                trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
-    with gr.Row():
-        with gr.Accordion('Feedback', open=True):
-            with gr.Row():
-                gr.Markdown('Vote for the voice you like the best among 3 challengers and 1 defender.')
-            with gr.Row():
-                heart_btn = gr.Button('🇺🇸 🚺 Heart ❤️', variant='secondary')
-                heart_btn.click(vote, inputs=[heart_btn])
-                soul_btn = gr.Button('🇺🇸 🚺 Spirit 🦋', variant='secondary')
-                soul_btn.click(vote, inputs=[soul_btn])
-            with gr.Row():
-                spirit_btn = gr.Button('🇬🇧 🚺 Soul 🪽', variant='secondary')
-                spirit_btn.click(vote, inputs=[spirit_btn])
-                old_btn = gr.Button('🇺🇸 🚺 American Female ⭐', variant='secondary')
-                old_btn.click(vote, inputs=[old_btn])
-    with gr.Row():
-        sk = gr.Textbox(visible=False)
-    text.change(lambda: os.environ['SK'], outputs=[sk])
-    text.submit(preview, inputs=[text, voice, speed, trim, sk], outputs=[audio])
-    generate_btn.click(preview, inputs=[text, voice, speed, trim, sk], outputs=[audio])
 
 USE_GPU_CHOICES = [('Auto 🔀', 'auto'), ('CPU 💬', False), ('ZeroGPU 📄', True)]
 USE_GPU_INFOS = {
@@ -831,6 +684,10 @@ This Space and the underlying Kokoro model are both under development and subjec
 '''
 with gr.Blocks() as changelog:
     gr.Markdown('''
+**11 Dec 2024**<br/>
+🚀 Multilingual v0.23<br/>
+🗣️ 85 total voices
+
 **8 Dec 2024**<br/>
 🚀 Multilingual v0.22<br/>
 🌐 5 languages: English, Chinese, Japanese, Korean, French<br/>
@@ -900,8 +757,8 @@ These datasets were **NOT** used to train Kokoro. They may be of interest to aca
 
 with gr.Blocks() as app:
     gr.TabbedInterface(
-        [preview_tts, ml_tts, basic_tts, lf_tts, about, data_card, changelog],
-        ['🔥 Preview v0.22x', '🌐 Multilingual v0.22', '🗣️ TTS v0.19', '📖 Long Form v0.19', 'ℹ️ About', '📁 Data', '📝 Changelog'],
+        [ml_tts, basic_tts, lf_tts, about, data_card, changelog],
+        ['🔥 Latest v0.23', '🗣️ TTS v0.19', '📖 Long Form v0.19', 'ℹ️ About', '📁 Data', '📝 Changelog'],
     )
 
 if __name__ == '__main__':
