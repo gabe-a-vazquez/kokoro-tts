@@ -379,11 +379,13 @@ with gr.Blocks() as ml_tts:
                 trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
     with gr.Row():
         gr.Markdown('''
-🎉 New! Kokoro v0.23 now supports 5 languages, including a new default voices. 🎉
+🎉 New! Kokoro v0.23 now supports 5 languages. 🎉
 
-📡 Telemetry: For debugging purposes, the text you enter anywhere in this space may be printed to temporary logs, which are periodically wiped.
+🧪 Note that v0.23 is experimental/WIP and may produce shaky speech. v0.19 is the last stable version.
 
 ⚠️ v0.23 does not yet support custom pronunciation, Long Form, or Voice Mixer. You can still use these features in v0.19.
+
+📡 Telemetry: For debugging purposes, the text you enter anywhere in this space may be printed to temporary logs, which are periodically wiped.
 
 🇨🇳🇯🇵🇰🇷 Tokenizers for Chinese, Japanese, and Korean do not correctly handle English letters yet. Remove or convert them to CJK first.
 ''', container=True)
