@@ -1,4 +1,5 @@
 from datetime import datetime
+from hashlib import sha256
 from huggingface_hub import snapshot_download
 from katsu import Katsu
 from models import build_model
@@ -32,6 +33,11 @@ for key, state_dict in torch.load(os.path.join(snapshot, 'net.pth'), map_locatio
 
 PARAM_COUNT = sum(p.numel() for value in models['cpu'].values() for p in value.parameters())
 assert PARAM_COUNT < 82_000_000, PARAM_COUNT
+with open(os.path.join(snapshot, 'net.pth'), 'rb') as rb:
+    model_hash = sha256(rb.read()).hexdigest()
+    print('model_hash', model_hash)
+    # SHA256 hash matches https://huggingface.co/hexgrad/Kokoro-82M/blob/main/kokoro-v0_19.pth
+    assert model_hash == '3b0c392f87508da38fad3a2f9d94c359f1b657ebd2ef79f9d56d69503e470b0a'
 
 random_texts = {}
 for lang in ['en', 'fr', 'ja', 'ko', 'zh']:
@@ -379,6 +385,8 @@ with gr.Blocks() as ml_tts:
                 trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
     with gr.Row():
         gr.Markdown('''
+🎄 Kokoro v0.19, Bella, & Sarah have been open sourced at [hf.co/hexgrad/Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M)
+
 🎉 New! Kokoro v0.23 now supports 5 languages. 🎉
 
 🧪 Note that v0.23 is experimental/WIP and may produce shaky speech. v0.19 is the last stable version.
@@ -638,7 +646,7 @@ Kokoro is a frontier TTS model for its size. It has [82 million](https://hf.co/s
 
 ### FAQ
 **Will this be open sourced?**<br/>
-There currently isn't a release date scheduled for the weights. The inference code in this space is MIT licensed. The architecture was already published by Li et al, with MIT licensed code and pretrained weights.
+v0.19 has been open sourced at [hf.co/hexgrad/Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) along with the voicepacks Bella, Sarah, and `af`. There currently isn't a release date scheduled for the other voices.
 
 **What is the difference between stable and unstable voices?**<br/>
 Unstable voices are more likely to stumble or produce unnatural artifacts, especially on short or strange texts. Stable voices are more likely to deliver natural speech on a wider range of inputs. The first two audio clips in this [blog post](https://hf.co/blog/hexgrad/kokoro-short-burst-upgrade) are examples of unstable and stable speech. Note that even unstable voices can sound fine on medium to long texts.
@@ -685,6 +693,9 @@ This Space and the underlying Kokoro model are both under development and subjec
 '''
 with gr.Blocks() as changelog:
     gr.Markdown('''
+**25 Dec 2024**<br/>
+🎄 Kokoro v0.19, Bella, & Sarah have been open sourced at [hf.co/hexgrad/Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M)
+
 **11 Dec 2024**<br/>
 🚀 Multilingual v0.23<br/>
 🗣️ 85 total voices
