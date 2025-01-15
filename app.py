@@ -659,9 +659,7 @@ For Basic TTS under ~100 tokens or characters, only a few seconds of audio need 
 ZeroGPU catches up beyond 100 tokens and especially closer to the ~500 token context window. Long Form mode processes batches of 100 segments at a time, so the GPU should outspeed the CPU by 1-2 orders of magnitude.
 
 ### Compute
-The model was trained on 1x A100-class 80GB instances rented from [Vast.ai](https://cloud.vast.ai/?ref_id=79907).<br/>
-Vast was chosen over other compute providers due to its competitive on-demand hourly rates.<br/>
-The average hourly cost for the 1x A100-class 80GB VRAM instances used for training was below $1/hr — around half the quoted rates from other providers.
+Kokoro v0.19 was trained on A100 80GB vRAM instances for approximately 500 total GPU hours. The average cost for each GPU hour was around $0.80, so the total cost was around $400.
 
 ### Gradio API
 The API has been restricted due to high request volume impacting CPU latency.
