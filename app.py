@@ -385,6 +385,8 @@ with gr.Blocks() as ml_tts:
                 trim = gr.Slider(minimum=0, maximum=1, value=0.5, step=0.1, label='✂️ Trim', info='How much to cut from both ends')
     with gr.Row():
         gr.Markdown('''
+❗ **This space is experiencing heavy lag, possibly due to high traffic.**
+
 🎄 Kokoro v0.19, Bella, & Sarah have been open sourced at [hf.co/hexgrad/Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M)
 
 🎉 New! Kokoro v0.23 now supports 5 languages. 🎉
