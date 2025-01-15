@@ -774,4 +774,4 @@ with gr.Blocks() as app:
     )
 
 if __name__ == '__main__':
-    app.queue(api_open=False).launch(show_api=False)
+    app.queue(api_open=True).launch(show_api=False)
