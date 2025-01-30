@@ -152,7 +152,7 @@ with gr.Blocks() as app:
         gr.Markdown('[***Kokoro*** **is an open-weight TTS model with 82 million parameters.**](https://hf.co/hexgrad/Kokoro-82M)', container=True)
     with gr.Row():
         with gr.Column():
-            text = gr.Textbox(label='Input Text', info=f"Up to ~500 characters per Generate, or {'∞' if IS_DUPLICATE else CHAR_LIMIT} characters per Stream")
+            text = gr.Textbox(label='Input Text', info=f"Up to ~500 characters per Generate, or {'∞' if CHAR_LIMIT is None else CHAR_LIMIT} characters per Stream")
             with gr.Row():
                 voice = gr.Dropdown(list(CHOICES.items()), value='af_heart', label='Voice', info='Quality and availability vary by language')
                 use_gpu = gr.Dropdown(
