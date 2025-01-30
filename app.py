@@ -147,11 +147,16 @@ with gr.Blocks() as stream_tab:
         gr.Markdown(STREAM_NOTE)
         gr.DuplicateButton()
 
+BANNER_TEXT = '''
+[***Kokoro*** **is an open-weight TTS model with 82 million parameters.**](https://hf.co/hexgrad/Kokoro-82M)
+
+This demo only showcases English, but you can directly use the model to access other languages.
+'''
 API_OPEN = os.getenv('SPACE_ID') != 'hexgrad/Kokoro-TTS'
 API_NAME = None if API_OPEN else False
 with gr.Blocks() as app:
     with gr.Row():
-        gr.Markdown('[***Kokoro*** **is an open-weight TTS model with 82 million parameters.**](https://hf.co/hexgrad/Kokoro-82M)', container=True)
+        gr.Markdown(BANNER_TEXT, container=True)
     with gr.Row():
         with gr.Column():
             text = gr.Textbox(label='Input Text', info=f"Up to ~500 characters per Generate, or {'∞' if CHAR_LIMIT is None else CHAR_LIMIT} characters per Stream")
