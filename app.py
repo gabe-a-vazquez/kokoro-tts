@@ -114,7 +114,9 @@ for v in CHOICES.values():
     pipelines[v[0]].load_voice(v)
 
 TOKEN_NOTE = '''
-💡 You can customize pronunciation like this: `[Kokoro](/kˈOkəɹO/)`
+💡 Customize pronunciation with Markdown link syntax and /slashes/ like `[Kokoro](/kˈOkəɹO/)`
+
+💬 To adjust intonation, try punctuation `;:,.!?—…"()“”` or stress `ˈ` and `ˌ`
 
 ⬇️ Lower stress `[1 level](-1)` or `[2 levels](-2)`
 
@@ -124,7 +126,7 @@ TOKEN_NOTE = '''
 with gr.Blocks() as generate_tab:
     out_audio = gr.Audio(label='Output Audio', interactive=False, streaming=False, autoplay=True)
     generate_btn = gr.Button('Generate', variant='primary')
-    with gr.Accordion('Output Tokens', open=False):
+    with gr.Accordion('Output Tokens', open=True):
         out_ps = gr.Textbox(interactive=False, show_label=False, info='Tokens used to generate the audio, up to 510 context length.')
         tokenize_btn = gr.Button('Tokenize', variant='secondary')
         gr.Markdown(TOKEN_NOTE)
