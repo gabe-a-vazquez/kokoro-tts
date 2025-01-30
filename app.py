@@ -176,6 +176,4 @@ with gr.Blocks() as app:
 if IS_DUPLICATE:
     app.queue(api_open=True).launch(show_api=True, ssr_mode=True)
 else:
-    interface = gr.Interface(fn=None, inputs=[], outputs=[], api_name=False)
-    interface.set_block(app)
-    interface.queue(api_open=False).launch(show_api=False, ssr_mode=True)
+    app.queue(api_open=False).launch(show_api=False, ssr_mode=True)
