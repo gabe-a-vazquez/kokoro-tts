@@ -6,11 +6,9 @@ import random
 import torch
 
 IS_DUPLICATE = not os.getenv('SPACE_ID', '').startswith('hexgrad/')
-N_MAX_CHARS = None if IS_DUPLICATE else 5000
-S_MAX_CHARS = '∞' if IS_DUPLICATE else str(N_MAX_CHARS)
+CHAR_LIMIT = None if IS_DUPLICATE else 5000
 
 CUDA_AVAILABLE = torch.cuda.is_available()
-
 models = {gpu: KModel().to('cuda' if gpu else 'cpu').eval() for gpu in [False] + ([True] if CUDA_AVAILABLE else [])}
 pipelines = {lang_code: KPipeline(lang_code=lang_code, model=False) for lang_code in 'ab'}
 pipelines['a'].g2p.lexicon.golds['kokoro'] = 'kˈOkəɹO'
@@ -20,8 +18,8 @@ pipelines['b'].g2p.lexicon.golds['kokoro'] = 'kˈQkəɹQ'
 def forward_gpu(ps, ref_s, speed):
     return models[True](ps, ref_s, speed)
 
-def return_audio_ps(text, voice='af_heart', speed=1, use_gpu=CUDA_AVAILABLE):
-    text = text if N_MAX_CHARS is None else text.strip()[:N_MAX_CHARS]
+def generate_first(text, voice='af_heart', speed=1, use_gpu=CUDA_AVAILABLE):
+    text = text if CHAR_LIMIT is None else text.strip()[:CHAR_LIMIT]
     pipeline = pipelines[voice[0]]
     pack = pipeline.load_voice(voice)
     use_gpu = use_gpu and CUDA_AVAILABLE
@@ -46,14 +44,14 @@ def return_audio_ps(text, voice='af_heart', speed=1, use_gpu=CUDA_AVAILABLE):
 def predict(text, voice='af_heart', speed=1):
     return return_audio_ps(text, voice, speed, use_gpu=False)[0]
 
-def return_ps(text, voice='af_heart'):
+def tokenize_first(text, voice='af_heart'):
     pipeline = pipelines[voice[0]]
     for _, ps, _ in pipeline(text, voice):
         return ps
     return ''
 
-def yield_audio(text, voice='af_heart', speed=1, use_gpu=CUDA_AVAILABLE):
-    text = text if N_MAX_CHARS is None else text.strip()[:N_MAX_CHARS]
+def generate_all(text, voice='af_heart', speed=1, use_gpu=CUDA_AVAILABLE):
+    text = text if CHAR_LIMIT is None else text.strip()[:CHAR_LIMIT]
     pipeline = pipelines[voice[0]]
     pack = pipeline.load_voice(voice)
     use_gpu = use_gpu and CUDA_AVAILABLE
@@ -133,8 +131,8 @@ with gr.Blocks() as generate_tab:
         predict_btn = gr.Button('Predict', variant='secondary', visible=False)
 
 STREAM_NOTE = ['⚠️ There is an unknown Gradio bug that might yield no audio the first time you click `Stream`.']
-if N_MAX_CHARS is not None:
-    STREAM_NOTE.append(f'✂️ Each stream is capped at {N_MAX_CHARS} characters.')
+if CHAR_LIMIT is not None:
+    STREAM_NOTE.append(f'✂️ Each stream is capped at {CHAR_LIMIT} characters.')
     STREAM_NOTE.append('🚀 Want more characters? You can [use Kokoro directly](https://huggingface.co/hexgrad/Kokoro-82M#usage) or duplicate this space:')
 STREAM_NOTE = '\n\n'.join(STREAM_NOTE)
 
@@ -147,12 +145,14 @@ with gr.Blocks() as stream_tab:
         gr.Markdown(STREAM_NOTE)
         gr.DuplicateButton()
 
+API_OPEN = os.getenv('SPACE_ID') != 'hexgrad/Kokoro-TTS'
+API_NAME = None if API_OPEN else False
 with gr.Blocks() as app:
     with gr.Row():
         gr.Markdown('[***Kokoro*** **is an open-weight TTS model with 82 million parameters.**](https://hf.co/hexgrad/Kokoro-82M)', container=True)
     with gr.Row():
         with gr.Column():
-            text = gr.Textbox(label='Input Text', info=f'Up to ~500 characters per Generate, or {S_MAX_CHARS} characters per Stream')
+            text = gr.Textbox(label='Input Text', info=f"Up to ~500 characters per Generate, or {'∞' if IS_DUPLICATE else CHAR_LIMIT} characters per Stream")
             with gr.Row():
                 voice = gr.Dropdown(list(CHOICES.items()), value='af_heart', label='Voice', info='Quality and availability vary by language')
                 use_gpu = gr.Dropdown(
@@ -164,16 +164,14 @@ with gr.Blocks() as app:
                 )
             speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='Speed')
             random_btn = gr.Button('Random Text', variant='secondary')
-            random_btn.click(get_random_text, inputs=[voice], outputs=[text])
         with gr.Column():
             gr.TabbedInterface([generate_tab, stream_tab], ['Generate', 'Stream'])
-    generate_btn.click(return_audio_ps, inputs=[text, voice, speed, use_gpu], outputs=[out_audio, out_ps])
-    tokenize_btn.click(return_ps, inputs=[text, voice], outputs=[out_ps])
-    stream_event = stream_btn.click(yield_audio, inputs=[text, voice, speed, use_gpu], outputs=[out_stream])
+    random_btn.click(fn=get_random_text, inputs=[voice], outputs=[text], api_name=API_NAME)
+    generate_btn.click(fn=generate_first, inputs=[text, voice, speed, use_gpu], outputs=[out_audio, out_ps], api_name=API_NAME)
+    tokenize_btn.click(fn=tokenize_first, inputs=[text, voice], outputs=[out_ps], api_name=API_NAME)
+    stream_event = stream_btn.click(fn=generate_all, inputs=[text, voice, speed, use_gpu], outputs=[out_stream], api_name=API_NAME)
     stop_btn.click(fn=None, cancels=stream_event)
-    predict_btn.click(predict, inputs=[text, voice, speed], outputs=[out_audio])
+    predict_btn.click(fn=predict, inputs=[text, voice, speed], outputs=[out_audio], api_name=API_NAME)
 
-if IS_DUPLICATE:
-    app.queue(api_open=True).launch(show_api=True, ssr_mode=True)
-else:
-    app.queue(api_open=False).launch(show_api=False, ssr_mode=True)
+if __name__ == '__main__':
+    app.queue(api_open=API_OPEN).launch(show_api=API_OPEN, ssr_mode=True)
