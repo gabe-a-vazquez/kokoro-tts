@@ -148,7 +148,7 @@ with gr.Blocks() as stream_tab:
         gr.DuplicateButton()
 
 BANNER_TEXT = '''
-[***Kokoro*** **is an open-weight TTS model with 82 million parameters.**](https://hf.co/hexgrad/Kokoro-82M)
+[***Kokoro*** **is an open-weight TTS model with 82 million parameters.**](https://huggingface.co/hexgrad/Kokoro-82M)
 
 This demo only showcases English, but you can directly use the model to access other languages.
 '''
