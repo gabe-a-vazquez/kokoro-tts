@@ -42,7 +42,7 @@ def generate_first(text, voice='af_heart', speed=1, use_gpu=CUDA_AVAILABLE):
 
 # Arena API
 def predict(text, voice='af_heart', speed=1):
-    return return_audio_ps(text, voice, speed, use_gpu=False)[0]
+    return generate_first(text, voice, speed, use_gpu=False)[0]
 
 def tokenize_first(text, voice='af_heart'):
     pipeline = pipelines[voice[0]]
