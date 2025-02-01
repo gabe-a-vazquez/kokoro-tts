@@ -150,6 +150,8 @@ with gr.Blocks() as stream_tab:
 BANNER_TEXT = '''
 [***Kokoro*** **is an open-weight TTS model with 82 million parameters.**](https://huggingface.co/hexgrad/Kokoro-82M)
 
+As of January 31st, 2025, Kokoro was the most-liked [**TTS model**](https://huggingface.co/models?pipeline_tag=text-to-speech&sort=likes) and the most-liked [**TTS space**](https://huggingface.co/spaces?sort=likes&search=tts) on Hugging Face.
+
 This demo only showcases English, but you can directly use the model to access other languages.
 '''
 API_OPEN = os.getenv('SPACE_ID') != 'hexgrad/Kokoro-TTS'
