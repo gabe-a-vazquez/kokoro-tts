@@ -82,6 +82,10 @@ def get_gatsby():
     with open('gatsby5k.md', 'r') as r:
         return r.read().strip()
 
+def get_frankenstein():
+    with open('frankenstein5k.md', 'r') as r:
+        return r.read().strip()
+
 CHOICES = {
 '🇺🇸 🚺 Heart ❤️': 'af_heart',
 '🇺🇸 🚺 Bella 🔥': 'af_bella',
@@ -174,12 +178,14 @@ with gr.Blocks() as app:
                     interactive=CUDA_AVAILABLE
                 )
             speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='Speed')
-            random_btn = gr.Button('Random Quote', variant='secondary')
-            gatsby_btn = gr.Button('Gatsby 5k', variant='secondary')
+            random_btn = gr.Button('🎲 Random Quote 💬', variant='secondary')
+            gatsby_btn = gr.Button('🥂 Gatsby 5k 📕', variant='secondary')
+            frankenstein_btn = gr.Button('💀 Frankenstein 5k 📗', variant='secondary')
         with gr.Column():
             gr.TabbedInterface([generate_tab, stream_tab], ['Generate', 'Stream'])
     random_btn.click(fn=get_random_quote, inputs=[], outputs=[text], api_name=API_NAME)
     gatsby_btn.click(fn=get_gatsby, inputs=[], outputs=[text], api_name=API_NAME)
+    frankenstein_btn.click(fn=get_frankenstein, inputs=[], outputs=[text], api_name=API_NAME)
     generate_btn.click(fn=generate_first, inputs=[text, voice, speed, use_gpu], outputs=[out_audio, out_ps], api_name=API_NAME)
     tokenize_btn.click(fn=tokenize_first, inputs=[text, voice], outputs=[out_ps], api_name=API_NAME)
     stream_event = stream_btn.click(fn=generate_all, inputs=[text, voice, speed, use_gpu], outputs=[out_stream], api_name=API_NAME)
