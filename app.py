@@ -72,14 +72,15 @@ def generate_all(text, voice='af_heart', speed=1, use_gpu=CUDA_AVAILABLE):
         yield 24000, audio.numpy()
     yield 24000, torch.zeros(1).numpy()
 
-random_texts = {}
-for lang in ['en']:
-    with open(f'{lang}.txt', 'r') as r:
-        random_texts[lang] = [line.strip() for line in r]
+with open('en.txt', 'r') as r:
+    random_quotes = [line.strip() for line in r]
 
-def get_random_text(voice):
-    lang = dict(a='en', b='en')[voice[0]]
-    return random.choice(random_texts[lang])
+def get_random_quote():
+    return random.choice(random_quotes)
+
+def get_gatsby():
+    with open('gatsby5k.md', 'r') as r:
+        return r.read().strip()
 
 CHOICES = {
 '🇺🇸 🚺 Heart ❤️': 'af_heart',
@@ -174,9 +175,11 @@ with gr.Blocks() as app:
                 )
             speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='Speed')
             random_btn = gr.Button('Random Text', variant='secondary')
+            gatsby_btn = gr.Button('Gatsby 5k', variant='secondary')
         with gr.Column():
             gr.TabbedInterface([generate_tab, stream_tab], ['Generate', 'Stream'])
-    random_btn.click(fn=get_random_text, inputs=[voice], outputs=[text], api_name=API_NAME)
+    random_btn.click(fn=get_random_quote, inputs=[], outputs=[text], api_name=API_NAME)
+    gatsby_btn.click(fn=get_gatsby, inputs=[], outputs=[text], api_name=API_NAME)
     generate_btn.click(fn=generate_first, inputs=[text, voice, speed, use_gpu], outputs=[out_audio, out_ps], api_name=API_NAME)
     tokenize_btn.click(fn=tokenize_first, inputs=[text, voice], outputs=[out_ps], api_name=API_NAME)
     stream_event = stream_btn.click(fn=generate_all, inputs=[text, voice, speed, use_gpu], outputs=[out_stream], api_name=API_NAME)
