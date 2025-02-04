@@ -14,7 +14,7 @@ pipelines = {lang_code: KPipeline(lang_code=lang_code, model=False) for lang_cod
 pipelines['a'].g2p.lexicon.golds['kokoro'] = 'kˈOkəɹO'
 pipelines['b'].g2p.lexicon.golds['kokoro'] = 'kˈQkəɹQ'
 
-@spaces.GPU(duration=10)
+@spaces.GPU(duration=30)
 def forward_gpu(ps, ref_s, speed):
     return models[True](ps, ref_s, speed)
 
@@ -70,6 +70,7 @@ def generate_all(text, voice='af_heart', speed=1, use_gpu=CUDA_AVAILABLE):
             else:
                 raise gr.Error(e)
         yield 24000, audio.numpy()
+    yield 24000, torch.zeros(1).numpy()
 
 random_texts = {}
 for lang in ['en']:
