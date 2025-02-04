@@ -174,7 +174,7 @@ with gr.Blocks() as app:
                     interactive=CUDA_AVAILABLE
                 )
             speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='Speed')
-            random_btn = gr.Button('Random Text', variant='secondary')
+            random_btn = gr.Button('Random Quote', variant='secondary')
             gatsby_btn = gr.Button('Gatsby 5k', variant='secondary')
         with gr.Column():
             gr.TabbedInterface([generate_tab, stream_tab], ['Generate', 'Stream'])
