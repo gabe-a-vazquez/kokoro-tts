@@ -179,8 +179,9 @@ with gr.Blocks() as app:
                 )
             speed = gr.Slider(minimum=0.5, maximum=2, value=1, step=0.1, label='Speed')
             random_btn = gr.Button('🎲 Random Quote 💬', variant='secondary')
-            gatsby_btn = gr.Button('🥂 Gatsby 5k 📕', variant='secondary')
-            frankenstein_btn = gr.Button('💀 Frankenstein 5k 📗', variant='secondary')
+            with gr.Row():
+                gatsby_btn = gr.Button('🥂 Gatsby 5k 📕', variant='secondary')
+                frankenstein_btn = gr.Button('💀 Frankenstein 5k 📗', variant='secondary')
         with gr.Column():
             gr.TabbedInterface([generate_tab, stream_tab], ['Generate', 'Stream'])
     random_btn.click(fn=get_random_quote, inputs=[], outputs=[text], api_name=API_NAME)
