@@ -1,19 +1,24 @@
-name: Sync with Hugging Face
-
+name: Sync to Hugging Face hub
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+
+  # to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 jobs:
-  sync:
+  sync-to-hub:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Push to Hugging Face
+        with:
+          fetch-depth: 0
+          lfs: true
+      - name: Pull remote changes
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          git remote add space https://huggingface.co/spaces/gabe-vazquez/kokoro-tts
-          git push space main
+        run: git pull https://gabe-vazquez:$HF_TOKEN@huggingface.co/spaces/gabe-vazquez/kokoro-tts main
+      - name: Push to hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: git push https://gabe-vazquez:$HF_TOKEN@huggingface.co/spaces/gabe-vazquez/kokoro-tts main
