@@ -51,4 +51,7 @@ Miniforge3-MacOSX-arm64.sh
 
 # Large files
 *.map
-*.so 
+*.so
+
+# Miniforge installer
+Miniforge3-MacOSX-arm64.sh 
