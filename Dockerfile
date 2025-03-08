@@ -3,17 +3,21 @@ FROM node:18-slim AS frontend-builder
 # Set working directory for frontend
 WORKDIR /app/frontend
 
-# Copy frontend package files
+# Copy frontend package files first for better caching
 COPY frontend/package*.json ./
 
-# Install frontend dependencies
-RUN npm install
+# Clean install dependencies, including SWC
+RUN npm cache clean --force && \
+    npm install
 
 # Copy frontend source code
 COPY frontend/ .
 
-# Build frontend
-RUN npm run build
+# Verify the lib directory exists and files are copied
+RUN ls -la src/lib || exit 1
+
+# Build frontend with verbose output
+RUN NODE_ENV=production npm run build
 
 # Use Python image for the backend
 FROM python:3.11-slim
@@ -28,7 +32,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables
-ENV MODEL_CACHE_DIR=/app/models
+ENV MODEL_CACHE_DIR=/app/models \
+    NODE_ENV=production
 
 # Copy backend requirements and install dependencies
 COPY backend/requirements.txt .
@@ -45,14 +50,14 @@ COPY --from=frontend-builder /app/frontend/.next frontend/.next
 COPY --from=frontend-builder /app/frontend/public frontend/public
 COPY --from=frontend-builder /app/frontend/package.json frontend/package.json
 
-# Install production dependencies for frontend
+# Install only production dependencies for frontend
 WORKDIR /app/frontend
-RUN npm install --production
+RUN npm install --omit=dev
 
 # Create start script
 WORKDIR /app
 RUN echo '#!/bin/bash\n\
-cd /app/frontend && npm run start &\n\
+cd /app/frontend && NODE_ENV=production npm run start &\n\
 cd /app/backend && uvicorn main:app --host 0.0.0.0 --port 7860\n\
 ' > start.sh
 
@@ -62,4 +67,4 @@ RUN chmod +x start.sh
 EXPOSE 7860
 
 # Start both services
-CMD ["./start.sh"] 
+CMD ["./start.sh"]
