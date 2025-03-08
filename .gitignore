@@ -20,6 +20,9 @@ var/
 .installed.cfg
 *.egg
 kokoro-env/
+*.dylib
+*.node
+*.wasm
 
 # Node
 node_modules/
@@ -43,4 +46,9 @@ yarn-error.log*
 
 # Project specific
 models/
-.env 
+.env
+Miniforge3-MacOSX-arm64.sh
+
+# Large files
+*.map
+*.so 
