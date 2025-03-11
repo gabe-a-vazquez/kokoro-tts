@@ -8,7 +8,8 @@ COPY frontend/package*.json ./
 
 # Clean install dependencies, including SWC
 RUN npm cache clean --force && \
-    npm install
+    npm install && \
+    npm install @next/swc-linux-x64-gnu @next/swc-linux-x64-musl
 
 # Copy frontend source code
 COPY frontend/ .
