@@ -1,0 +1,26 @@
+# Dependencies
+**/node_modules
+**/__pycache__
+**/*.pyc
+
+# Build outputs
+frontend/.next
+frontend/out
+**/*.pyo
+**/*.pyd
+
+# Environment and IDE
+.env*
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Logs
+**/logs
+**/*.log
+npm-debug.log* 
