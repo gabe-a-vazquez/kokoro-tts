@@ -14,7 +14,7 @@ RUN npm cache clean --force && \
 COPY frontend/ .
 
 # Verify the lib directory exists and files are copied
-RUN ls -la src/lib || exit 1
+RUN ls -la src/lib || ls -la frontend/src/lib || exit 1
 
 # Build frontend with verbose output
 RUN NODE_ENV=production npm run build
