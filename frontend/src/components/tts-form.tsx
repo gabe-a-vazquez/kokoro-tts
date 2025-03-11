@@ -123,6 +123,7 @@ export function TTSForm() {
   };
 
   const handleTextChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    // Set the text to the value of the textarea
     setText(e.target.value);
   };
 
