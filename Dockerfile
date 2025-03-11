@@ -14,11 +14,10 @@ RUN npm cache clean --force && \
 # Copy frontend source code
 COPY frontend/ .
 
-# Verify the lib directory exists and files are copied
-RUN test -d src/lib || mkdir -p src/lib
-
-# Build frontend with verbose output
-RUN NODE_ENV=production npm run build
+# Ensure proper module resolution
+RUN rm -rf .next && \
+    npm install && \
+    npm run build
 
 # Use Python image for the backend
 FROM python:3.11-slim
