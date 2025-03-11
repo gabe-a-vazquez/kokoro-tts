@@ -12,8 +12,14 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { api, VoiceOption } from "@/lib/api";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
+
+interface VoiceOption {
+  id: string;
+  name: string;
+  // add any other properties that your voice objects have
+}
 
 export function TTSForm() {
   const [text, setText] = useState("");
@@ -28,8 +34,9 @@ export function TTSForm() {
     // Fetch available voices
     api
       .getVoices()
-
-      .then(setVoices)
+      .then((voices: VoiceOption[]) => {
+        setVoices(voices);
+      })
       .catch((error: Error) => {
         console.error("Failed to load voices:", error);
         toast.error("Failed to load voices");
@@ -89,7 +96,7 @@ export function TTSForm() {
             <SelectContent>
               {voices.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
-                  {v.emoji} {v.name}
+                  {v.name}
                 </SelectItem>
               ))}
             </SelectContent>
