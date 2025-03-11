@@ -55,9 +55,10 @@ async def generate_speech(request: TTSRequest):
         )
         # Convert to float32 and ensure values are between -1 and 1
         audio_normalized = audio.numpy().astype(np.float32)
-        # Convert to int16 for WAV format
-        audio_int16 = (audio_normalized * 32767).astype(np.int16)
-        return {"audio": audio_int16.tolist(), "sample_rate": 24000}
+        return {
+            "sample_rate": 24000,
+            "audio": audio_normalized.tolist()
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

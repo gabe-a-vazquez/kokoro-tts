@@ -13,6 +13,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
+import { audioBufferToWav } from "@/lib/audio-utils";
 import { toast } from "sonner";
 
 interface VoiceOption {
@@ -46,19 +47,70 @@ export function TTSForm() {
   const handleSubmit = async () => {
     try {
       setIsLoading(true);
-      const audioBuffer = await api.generateSpeech({
+      const response = await api.generateSpeech({
         text,
         voice,
         speed,
         use_gpu: useGpu,
       });
 
-      // Convert ArrayBuffer to Blob and create URL
-      const blob = new Blob([audioBuffer], { type: "audio/wav" });
-      const url = URL.createObjectURL(blob);
+      // Create an audio context
+      const AudioContextClass =
+        window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioContextClass();
+
+      // Create a Float32Array from the response data
+      const audioData = new Float32Array(response.audio);
+
+      // Create an AudioBuffer
+      const audioBuffer = audioContext.createBuffer(
+        1,
+        audioData.length,
+        response.sample_rate
+      );
+      audioBuffer.copyToChannel(audioData, 0);
+
+      // Convert to 16-bit PCM
+      const pcmData = new Int16Array(audioData.length);
+      const scale = 0x7fff; // Max value for 16-bit signed integer
+
+      for (let i = 0; i < audioData.length; i++) {
+        const s = Math.max(-1, Math.min(1, audioData[i]));
+        pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+
+      // Create WAV header
+      const wavHeader = new ArrayBuffer(44);
+      const view = new DataView(wavHeader);
+
+      // "RIFF" chunk descriptor
+      view.setUint32(0, 0x46464952, true); // "RIFF" in ASCII
+      view.setUint32(4, 36 + pcmData.length * 2, true); // File length
+      view.setUint32(8, 0x45564157, true); // "WAVE" in ASCII
+
+      // "fmt " sub-chunk
+      view.setUint32(12, 0x20746d66, true); // "fmt " in ASCII
+      view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+      view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+      view.setUint16(22, 1, true); // NumChannels (1 for mono)
+      view.setUint32(24, response.sample_rate, true); // SampleRate
+      view.setUint32(28, response.sample_rate * 2, true); // ByteRate
+      view.setUint16(32, 2, true); // BlockAlign
+      view.setUint16(34, 16, true); // BitsPerSample
+
+      // "data" sub-chunk
+      view.setUint32(36, 0x61746164, true); // "data" in ASCII
+      view.setUint32(40, pcmData.length * 2, true); // Subchunk2Size
+
+      // Combine header and PCM data
+      const wavBlob = new Blob([wavHeader, pcmData.buffer], {
+        type: "audio/wav",
+      });
+
+      const url = URL.createObjectURL(wavBlob);
       setAudioUrl(url);
       toast.success("Speech generated successfully!");
-    } catch (error: unknown) {
+    } catch (error) {
       console.error("Failed to generate speech:", error);
       if (error instanceof Error) {
         toast.error(`Failed to generate speech: ${error.message}`);

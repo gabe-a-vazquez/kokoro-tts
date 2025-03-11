@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     git \
     cmake \
     pkg-config \
+    nginx \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js
@@ -46,11 +47,14 @@ RUN npm run build
 WORKDIR /app
 COPY backend/ ./backend/
 COPY supervisord.conf /etc/supervisor/conf.d/
+COPY nginx.conf /etc/nginx/nginx.conf
 COPY docker-entrypoint.sh /
 
 RUN pip install supervisor && \
     mkdir -p /var/log/supervisor && \
     chmod +x /docker-entrypoint.sh
 
+# Expose only the Nginx port
 EXPOSE 7860
+
 ENTRYPOINT ["/docker-entrypoint.sh"] 
